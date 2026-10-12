@@ -1,6 +1,8 @@
 import os
+import time
 import requests
 from google import genai
+from google.genai.errors import ServerError
 from supabase import Client, create_client
 
 # 1. Load and sanitize environment secrets
@@ -69,7 +71,7 @@ def run_campaign():
   except Exception as e:
     print(f"Short.io Exception: {e}")
 
-  # 5. Generate promo content with Google GenAI using the stable latest alias
+  # 5. Generate promo content with Gemini (with built-in retry handling for 503s)
   snippet = manuscript[:500] if manuscript else title
   prompt = (
       f"Write an engaging 2-sentence promotional post for the book '{title}'. "
@@ -78,11 +80,31 @@ def run_campaign():
   )
 
   print("Generating promotional copy with Gemini...")
-  ai_response = ai_client.models.generate_content(
-      model="gemini-flash-latest",
-      contents=prompt,
-  )
-  promo_text = ai_response.text
+  promo_text = None
+  models_to_try = ["gemini-flash-latest", "gemini-2.5-flash"]
+  
+  for model_name in models_to_try:
+    retries = 3
+    for attempt in range(retries):
+      try:
+        ai_response = ai_client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+        )
+        promo_text = ai_response.text
+        break
+      except ServerError as e:
+        print(f"Model {model_name} busy (Attempt {attempt+1}/{retries}): {e}")
+        time.sleep(3)  # Wait 3 seconds before retrying
+      except Exception as e:
+        print(f"Error with model {model_name}: {e}")
+        break
+    if promo_text:
+      break
+
+  if not promo_text:
+    raise RuntimeError("Failed to generate content from Gemini after multiple attempts due to high demand.")
+
   print(f"Generated Copy:\n{promo_text}")
 
   # 6. Save campaign execution log in Supabase
