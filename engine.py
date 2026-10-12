@@ -30,14 +30,16 @@ ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 def run_campaign():
-  # 3. Fetch active product from mamachi_products
+  # 3. Fetch active product, prioritizing the newest row
   response = (
       supabase.table("mamachi_products")
       .select("*")
       .eq("is_active", True)
+      .order("created_at", desc=True)
       .limit(1)
       .execute()
   )
+
   if not response.data:
     print("No active products found in Supabase.")
     return
@@ -47,7 +49,7 @@ def run_campaign():
   # Map table columns
   title = product.get("product_title")
   destination_url = product.get("destination_url")
-  manuscript = product.get("manuscript_text")
+  manuscript = product.get("manuscript_text", "")
 
   print(f"Processing product: {title}")
   print(f"Destination URL: {destination_url}")
@@ -67,18 +69,21 @@ def run_campaign():
   except Exception as e:
     print(f"Short.io Exception: {e}")
 
-# 5. Generate promo content with Google GenAI
+  # 5. Generate promo content with Google GenAI using the stable latest alias
+  snippet = manuscript[:500] if manuscript else title
   prompt = (
       f"Write an engaging 2-sentence promotional post for the book '{title}'. "
-      f"Details/Manuscript snippet: {manuscript[:500]}... "
+      f"Details/Manuscript snippet: {snippet}... "
       f"Include this link: {short_link}"
   )
 
+  print("Generating promotional copy with Gemini...")
   ai_response = ai_client.models.generate_content(
-      model="gemini-2.5-flash",  # <--- Use stable model ID
+      model="gemini-flash-latest",
       contents=prompt,
   )
   promo_text = ai_response.text
+  print(f"Generated Copy:\n{promo_text}")
 
   # 6. Save campaign execution log in Supabase
   log_entry = {
@@ -88,7 +93,7 @@ def run_campaign():
       "status": "published",
   }
   supabase.table("mamachi_campaign_logs").insert(log_entry).execute()
-  print("Campaign created and logged successfully!")
+  print("Campaign created and logged successfully in Supabase!")
 
 
 if __name__ == "__main__":
