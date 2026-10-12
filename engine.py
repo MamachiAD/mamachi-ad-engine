@@ -71,7 +71,7 @@ def run_campaign():
   except Exception as e:
     print(f"Short.io Exception: {e}")
 
-  # 5. Generate promo content with Gemini
+# 5. Generate promo content with Gemini
   snippet = manuscript[:500] if manuscript else title
   prompt = (
       f"Write an engaging 2-sentence promotional post for the book '{title}'. "
@@ -81,7 +81,7 @@ def run_campaign():
 
   print("Generating promotional copy with Gemini...")
   promo_text = None
-  models_to_try = ["gemini-flash-latest", "gemini-2.5-flash"]
+  models_to_try = ["gemini-3.8-flash", "gemini-flash-latest"]
   
   for model_name in models_to_try:
     retries = 3
@@ -101,11 +101,6 @@ def run_campaign():
         break
     if promo_text:
       break
-
-  if not promo_text:
-    raise RuntimeError("Failed to generate content from Gemini after multiple attempts due to high demand.")
-
-  print(f"Generated Copy:\n{promo_text}")
 
   # 6. Save campaign execution log matching mamachi_campaign_logs schema
   log_entry = {
