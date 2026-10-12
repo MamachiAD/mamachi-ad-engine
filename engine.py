@@ -9,6 +9,11 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 SHORTIO_API_KEY = os.environ.get("SHORTIO_API_KEY")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+# Diagnostic check to catch secret issues early
+print(f"DEBUG: SUPABASE_URL loaded -> '{SUPABASE_URL}'")
+if not SUPABASE_URL or not SUPABASE_URL.startswith("https://"):
+    raise ValueError("ERROR: SUPABASE_URL is either empty, missing, or does not start with 'https://'! Check your GitHub Repository Secrets.")
+
 # Initialize Clients
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
@@ -24,7 +29,7 @@ def run_campaign():
     print(f"Processing product: {product['name']}")
 
     # 2. Shorten link using Short.io API
-    short_link = product['target_url'] # Default fallback
+    short_link = product['target_url']
     try:
         shortio_url = "https://api.short.io/links"
         headers = {
@@ -33,7 +38,7 @@ def run_campaign():
         }
         payload = {
             "originalURL": product['target_url'],
-            "domain": "mamachi-engine.s.gy"  # Ensure this matches your Short.io domain/subdomain exact name
+            "domain": "mamachi-engine.s.gy"
         }
         short_res = requests.post(shortio_url, json=payload, headers=headers)
         if short_res.status_code in [200, 201]:
@@ -46,7 +51,6 @@ def run_campaign():
 
     # 3. Generate promo content with Google GenAI
     prompt = f"Write an engaging 2-sentence promotional post for {product['name']}. Description: {product['description']}. Include link: {short_link}"
-    
     ai_response = ai_client.models.generate_content(
         model='gemini-2.5-flash',
         contents=prompt,
