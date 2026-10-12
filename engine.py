@@ -71,7 +71,7 @@ def run_campaign():
   except Exception as e:
     print(f"Short.io Exception: {e}")
 
-  # 5. Generate promo content with Gemini (with built-in retry handling for 503s)
+  # 5. Generate promo content with Gemini
   snippet = manuscript[:500] if manuscript else title
   prompt = (
       f"Write an engaging 2-sentence promotional post for the book '{title}'. "
@@ -95,7 +95,7 @@ def run_campaign():
         break
       except ServerError as e:
         print(f"Model {model_name} busy (Attempt {attempt+1}/{retries}): {e}")
-        time.sleep(3)  # Wait 3 seconds before retrying
+        time.sleep(3)
       except Exception as e:
         print(f"Error with model {model_name}: {e}")
         break
@@ -107,12 +107,13 @@ def run_campaign():
 
   print(f"Generated Copy:\n{promo_text}")
 
-  # 6. Save campaign execution log in Supabase
+  # 6. Save campaign execution log matching mamachi_campaign_logs schema
   log_entry = {
       "product_id": product.get("product_id"),
-      "generated_link": short_link,
-      "promo_text": promo_text,
-      "status": "published",
+      "platform": "github-actions",
+      "generated_caption": promo_text,
+      "short_url": short_link,
+      "clicks_count": 0,
   }
   supabase.table("mamachi_campaign_logs").insert(log_entry).execute()
   print("Campaign created and logged successfully in Supabase!")
