@@ -1,6 +1,7 @@
 import os
 import time
 import requests
+from requests_oauthlib import OAuth1
 from google import genai
 from google.genai.errors import ServerError
 from supabase import Client, create_client
@@ -11,6 +12,12 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip().strip('"\'')
 SHORTIO_API_KEY = os.environ.get("SHORTIO_API_KEY", "").strip().strip('"\'')
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip().strip('"\'')
 
+# Twitter Secrets
+TWITTER_API_KEY = os.environ.get("TWITTER_API_KEY", "").strip().strip('"\'')
+TWITTER_API_SECRET = os.environ.get("TWITTER_API_SECRET", "").strip().strip('"\'')
+TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN", "").strip().strip('"\'')
+TWITTER_ACCESS_SECRET = os.environ.get("TWITTER_ACCESS_SECRET", "").strip().strip('"\'')
+
 # Safe diagnostic check
 print(
     f"DEBUG: SUPABASE_URL status -> Length: {len(SUPABASE_URL)}, Starts"
@@ -19,8 +26,7 @@ print(
 
 if not SUPABASE_URL or not SUPABASE_URL.startswith("https://"):
   raise ValueError(
-      "ERROR: SUPABASE_URL is empty or does not start with 'https://'. Please"
-      " check your GitHub Repository Secrets."
+      "ERROR: SUPABASE_URL is empty or does not start with 'https://'."
   )
 
 if not SUPABASE_KEY:
@@ -29,6 +35,30 @@ if not SUPABASE_KEY:
 # 2. Initialize Clients
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
+
+
+def post_to_twitter(text):
+  """Publishes the generated caption live to X (Twitter)."""
+  if not all([TWITTER_API_KEY, TWITTER_API_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET]):
+    print("Twitter credentials missing. Skipping live social post.")
+    return False
+
+  url = "https://api.twitter.com/2/tweets"
+  auth = OAuth1(
+      TWITTER_API_KEY,
+      TWITTER_API_SECRET,
+      TWITTER_ACCESS_TOKEN,
+      TWITTER_ACCESS_SECRET
+  )
+  payload = {"text": text}
+  
+  response = requests.post(url, json=payload, auth=auth)
+  if response.status_code in [200, 201]:
+    print("Successfully posted live to X (Twitter)!")
+    return True
+  else:
+    print(f"Twitter API Error ({response.status_code}): {response.text}")
+    return False
 
 
 def run_campaign():
@@ -71,7 +101,7 @@ def run_campaign():
   except Exception as e:
     print(f"Short.io Exception: {e}")
 
-# 5. Generate promo content with Gemini
+  # 5. Generate promo content with Gemini
   snippet = manuscript[:500] if manuscript else title
   prompt = (
       f"Write an engaging 2-sentence promotional post for the book '{title}'. "
@@ -102,16 +132,24 @@ def run_campaign():
     if promo_text:
       break
 
-  # 6. Save campaign execution log matching mamachi_campaign_logs schema
+  if not promo_text:
+    raise RuntimeError("Failed to generate content from Gemini after multiple attempts.")
+
+  print(f"Generated Copy:\n{promo_text}")
+
+  # 6. Post live to social media
+  post_to_twitter(promo_text)
+
+  # 7. Save campaign execution log in Supabase
   log_entry = {
       "product_id": product.get("product_id"),
-      "platform": "github-actions",
+      "platform": "twitter",
       "generated_caption": promo_text,
       "short_url": short_link,
       "clicks_count": 0,
   }
   supabase.table("mamachi_campaign_logs").insert(log_entry).execute()
-  print("Campaign created and logged successfully in Supabase!")
+  print("Campaign created, posted, and logged successfully in Supabase!")
 
 
 if __name__ == "__main__":
