@@ -67,7 +67,7 @@ def run_campaign():
   except Exception as e:
     print(f"Short.io Exception: {e}")
 
-  # 5. Generate promo content with Google GenAI
+# 5. Generate promo content with Google GenAI
   prompt = (
       f"Write an engaging 2-sentence promotional post for the book '{title}'. "
       f"Details/Manuscript snippet: {manuscript[:500]}... "
@@ -75,7 +75,7 @@ def run_campaign():
   )
 
   ai_response = ai_client.models.generate_content(
-      model="gemini-1.5-flash",  # <--- Updated model name here
+      model="gemini-2.5-flash",  # <--- Use stable model ID
       contents=prompt,
   )
   promo_text = ai_response.text
