@@ -75,7 +75,7 @@ def run_campaign():
   )
 
   ai_response = ai_client.models.generate_content(
-      model="gemini-2.5-flash",
+      model="gemini-1.5-flash",  # <--- Updated model name here
       contents=prompt,
   )
   promo_text = ai_response.text
