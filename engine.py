@@ -3,16 +3,20 @@ import requests
 from supabase import create_client, Client
 from google import genai
 
-# Load environment secrets
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-SHORTIO_API_KEY = os.environ.get("SHORTIO_API_KEY")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# Load and sanitize environment secrets (removes accidental quotes or spaces)
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().strip('"\'')
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip().strip('"\'')
+SHORTIO_API_KEY = os.environ.get("SHORTIO_API_KEY", "").strip().strip('"\'')
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip().strip('"\'')
 
-# Diagnostic check to catch secret issues early
-print(f"DEBUG: SUPABASE_URL loaded -> '{SUPABASE_URL}'")
+# Safe diagnostic check (prints length and status instead of the masked secret)
+print(f"DEBUG: SUPABASE_URL status -> Length: {len(SUPABASE_URL)}, Starts with https: {SUPABASE_URL.startswith('https://')}")
+
 if not SUPABASE_URL or not SUPABASE_URL.startswith("https://"):
-    raise ValueError("ERROR: SUPABASE_URL is either empty, missing, or does not start with 'https://'! Check your GitHub Repository Secrets.")
+    raise ValueError("ERROR: SUPABASE_URL is empty or does not start with 'https://'. Please check your GitHub Repository Secrets.")
+
+if not SUPABASE_KEY:
+    raise ValueError("ERROR: SUPABASE_KEY is missing.")
 
 # Initialize Clients
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
