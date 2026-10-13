@@ -1,67 +1,102 @@
-name: Mamachi AD Engine Automation
-
+name: run-engine
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: "0 */6 * * *"        # every 6 hours; change to taste
   workflow_dispatch:
-
+    inputs:
+      dry_run:
+        description: "Dry run (no real posts)"
+        type: boolean
+        default: false
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: engine
+  cancel-in-progress: false
 jobs:
   run-engine:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: Install system dependencies (FFmpeg)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Create necessary folders
-        run: mkdir -p assets generated_media
-
-      - name: Run Mamachi Campaign Engine
+          python-version: "3.12"
+          cache: pip
+      - name: Install ffmpeg (only when video is on)
+        if: ${{ vars.VIDEO_ENABLED == 'true' }}
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r requirements.txt
+      - run: mkdir -p assets generated_media docs
+      - name: Run engine
+        run: python engine.py
         env:
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          # Non-secret switches: Settings > Secrets and variables > Actions > Variables
+          VIDEO_ENABLED: ${{ vars.VIDEO_ENABLED || 'false' }}
+          TIKTOK_ENABLED: ${{ vars.TIKTOK_ENABLED || 'false' }}
+          INSTAGRAM_ENABLED: ${{ vars.INSTAGRAM_ENABLED || 'false' }}
+          TTS_ENGINE: ${{ vars.TTS_ENGINE || 'gtts' }}
+          BRAND_NAME: ${{ vars.BRAND_NAME || 'Mamachi' }}
+          DISABLE_PLATFORMS: ${{ vars.DISABLE_PLATFORMS || '' }}
+          # Required
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}        # service_role key
           SHORTIO_API_KEY: ${{ secrets.SHORTIO_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
-          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          # Optional platforms: leave unset until ready, each one switches on by itself
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          MASTODON_INSTANCE: ${{ secrets.MASTODON_INSTANCE }}
+          MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
           LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
           LINKEDIN_AUTHOR_URN: ${{ secrets.LINKEDIN_AUTHOR_URN }}
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
-
-          VIDEO_ENABLED: "true"
-          YOUTUBE_ENABLED: "true"
-          TIKTOK_ENABLED: "true"
-          INSTAGRAM_ENABLED: "true"
-
-          SHORTIO_DOMAIN: ${{ secrets.SHORTIO_DOMAIN }}
-          DRY_RUN: "false"
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
-
-        run: python engine.py
-
-      - name: Upload generated media
+          DISCLAIMER: ${{ vars.DISCLAIMER || '' }}
+      - name: Publish web feed (docs/)
         if: always()
-        uses: actions/upload-artifact@v6          # ← fixed (Node 24 native)
+        run: |
+          git config user.name "mamachi-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add docs
+          git diff --cached --quiet || (git commit -m "update web feed" && git push)
+      - name: Trigger GitHub Pages build and check the page is live
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f docs/posts.json ] || { echo "No docs/posts.json yet, nothing to check."; exit 0; }
+          # Pushes made with the built-in token may not start the Pages build by themselves, so ask for one.
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds" >/dev/null 2>&1 \
+            && echo "Pages build requested" \
+            || echo "Could not request a build (Pages not enabled? Settings > Pages > Deploy from a branch > main > /docs)"
+          URL=$(python3 -c "import json,os;p=json.load(open('docs/posts.json'))[0]['id'];o,r=os.environ['GITHUB_REPOSITORY'].split('/');print(f'https://{o.lower()}.github.io/{r}/posts/{p}.html')")
+          for i in $(seq 1 16); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo 000)
+            [ "$CODE" = "200" ] && break
+            sleep 15
+          done
+          if [ "$CODE" = "200" ]; then
+            echo "### Web page is live ✅" >> "$GITHUB_STEP_SUMMARY"; echo "$URL" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Web page not live yet ⏳ (HTTP $CODE)" >> "$GITHUB_STEP_SUMMARY"
+            echo "Check: Settings > Pages is 'Deploy from a branch', branch main, folder /docs; repo is public (free plan); Actions tab shows 'pages build and deployment'." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Keep generated media (TikTok/Instagram packages)
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
-          name: generated-media-${{ github.run_id }}
+          name: generated-media
           path: generated_media/
-          retention-days: 14
           if-no-files-found: ignore
+          retention-days: 7
