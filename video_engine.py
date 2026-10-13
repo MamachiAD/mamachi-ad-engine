@@ -40,7 +40,7 @@ def run_cmd(cmd: List[str], timeout: int = 300) -> bool:
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         if result.returncode != 0:
-            logger.warning("Command failed:\n%s", result.stderr[-1200:])
+            logger.warning("Command failed:\n%s", result.stderr[-1200:] if result.stderr else "No stderr")
             return False
         return True
     except Exception as e:
@@ -105,22 +105,46 @@ def generate_images(title: str, snippet: str, count: int = 5) -> List[str]:
 
 
 # -----------------------------------------------------------------------------
-# Free Voice
+# Free Voice (Improved with strong fallback)
 # -----------------------------------------------------------------------------
 def generate_voiceover(text: str, output_path: str) -> bool:
+    """
+    Free voiceover generation with strong fallback.
+    1. Tries edge-tts (best quality)
+    2. Falls back to gTTS if edge-tts fails
+    """
+    # --- Try edge-tts first ---
     try:
-        return run_cmd([
-            "edge-tts", "--voice", DEFAULT_VOICE,
-            "--text", text, "--write-media", output_path
-        ], timeout=60)
-    except Exception:
-        try:
-            from gtts import gTTS
-            gTTS(text=text, lang="en").save(output_path)
+        cmd = [
+            "edge-tts",
+            "--voice", DEFAULT_VOICE,
+            "--text", text,
+            "--write-media", output_path,
+        ]
+        success = run_cmd(cmd, timeout=60)
+        if success and Path(output_path).exists() and Path(output_path).stat().st_size > 1000:
+            logger.info("Voice generated successfully with edge-tts")
             return True
-        except Exception as e:
-            logger.error("TTS failed: %s", e)
+        else:
+            logger.warning("edge-tts produced empty or failed file, falling back to gTTS...")
+    except Exception as e:
+        logger.warning("edge-tts failed: %s → falling back to gTTS", e)
+
+    # --- Fallback to gTTS ---
+    try:
+        from gtts import gTTS
+        tts = gTTS(text=text, lang="en", slow=False)
+        tts.save(output_path)
+
+        if Path(output_path).exists() and Path(output_path).stat().st_size > 500:
+            logger.info("Voice generated successfully with gTTS (fallback)")
+            return True
+        else:
+            logger.error("gTTS also produced empty file")
             return False
+    except Exception as e:
+        logger.error("All TTS methods failed: %s", e)
+        return False
 
 
 # -----------------------------------------------------------------------------
@@ -212,6 +236,7 @@ def generate_short_video(title: str, snippet: str, short_link: str) -> Optional[
         voice_path = tmp.name
 
     if not generate_voiceover(voice_script, voice_path):
+        logger.error("Voice generation failed completely")
         return None
 
     images = generate_images(title, snippet, count=5)
@@ -219,7 +244,7 @@ def generate_short_video(title: str, snippet: str, short_link: str) -> Optional[
 
     success = create_vertical_video(images, voice_path, title, short_link, output_path)
 
-    # Cleanup temporary files
+    # Cleanup
     try:
         os.unlink(voice_path)
     except Exception:
