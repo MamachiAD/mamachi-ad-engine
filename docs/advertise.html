@@ -163,7 +163,6 @@
         async function submitCampaign(event) {
             event.preventDefault();
             
-            // Gather form data
             const campaignData = {
                 vendor_name: document.getElementById('vendor_name').value,
                 vendor_email: document.getElementById('vendor_email').value,
@@ -175,18 +174,28 @@
                 billing_model: document.querySelector('input[name="billing_model"]:checked').value,
                 hourly_limit_usd: parseFloat(document.getElementById('hourly_limit_usd').value),
                 daily_limit_usd: parseFloat(document.getElementById('daily_limit_usd').value),
-                is_active: false, // Will be set to true after Stripe webhook confirms payment
-                fee_paid: false
             };
 
-            // In Step 2, this will redirect to Stripe Checkout. For now, we simulate a successful submission save.
-            showToast("Campaign configured! Redirecting to secure Stripe Checkout...");
-            console.log("Submitted Campaign Payload:", campaignData);
-            
-            // Simulated delay before success redirect
-            setTimeout(() => {
-                alert("Step 1 complete! In Step 2, we will connect this form to Stripe Checkout and Supabase webhook activation.");
-            }, 2000);
+            showToast("Initializing secure checkout...");
+
+            try {
+                // Replace with your actual deployed Flask webhook/backend endpoint URL
+                const response = await fetch('https://your-backend-server.com/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(campaignData)
+                });
+                const result = await response.json();
+                
+                if (result.url) {
+                    window.location.href = result.url; // Redirect to Stripe Checkout
+                } else {
+                    alert("Error: " + (result.error || "Could not initiate payment"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Network error connecting to payment gateway.");
+            }
         }
     </script>
 </body>
