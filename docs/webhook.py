@@ -4,26 +4,21 @@ from flask import Flask, request, jsonify
 from supabase import create_client, Client
 from engine import check_global_ad_compliance
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Initialize Flask App
 app = Flask(__name__)
 
-# Initialize Supabase Client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # Ensure this is your service_role key
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("Missing SUPABASE_URL or SUPABASE_KEY environment variables.")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-
 @app.route('/paypal-webhook', methods=['POST'])
 def handle_paypal_payment():
-    """Receives payment confirmation from PayPal/frontend, validates global compliance, and activates campaign in Supabase."""
     try:
         data = request.json
         if not data:
@@ -31,7 +26,6 @@ def handle_paypal_payment():
 
         logger.info(f"Processing payment webhook for product: {data.get('product_title')}")
 
-        # 1. Run global compliance & social norm check via Gemini AI
         compliance = check_global_ad_compliance(
             product_title=data.get('product_title', ''),
             manuscript_text=data.get('manuscript_text', ''),
@@ -44,7 +38,6 @@ def handle_paypal_payment():
 
         logger.info(f"Compliance check completed. Status: {status}")
 
-        # 2. Register/Update Vendor in Supabase (Using upsert to handle returning vendors)
         vendor_res = supabase.table("mamachi_vendors").upsert(
             {
                 "name": data.get('vendor_name'),
@@ -60,7 +53,6 @@ def handle_paypal_payment():
 
         vendor_id = vendor_res.data[0]['id']
 
-        # 3. Register Product Campaign in Supabase with Compliance Status
         product_payload = {
             "vendor_id": vendor_id,
             "product_title": data.get("product_title"),
@@ -74,7 +66,7 @@ def handle_paypal_payment():
             "daily_limit_usd": data.get("daily_limit_usd", 15.00),
             "compliance_status": status,
             "rejection_reason": rejection_reason,
-            "is_active": is_approved,  # Automatically activates only if compliant
+            "is_active": is_approved,
             "fee_paid": True
         }
 
@@ -91,7 +83,5 @@ def handle_paypal_payment():
         logger.exception("PayPal webhook processing failed: %s", e)
         return jsonify({"error": str(e)}), 500
 
-
 if __name__ == '__main__':
-    # Run server on port 5000 (Use gunicorn/uwsgi in production)
     app.run(host='0.0.0.0', port=5000)
