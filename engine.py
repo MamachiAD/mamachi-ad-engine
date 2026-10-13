@@ -3,14 +3,14 @@ import sys
 import time
 import random
 import logging
+from datetime import datetime, timezone
 from typing import Optional, Any, Dict, List
+from pathlib import Path
 
 import requests
 from google import genai
 from google.genai import types
 from supabase import Client, create_client
-
-from pathlib import Path
 
 import platforms
 from platforms import Post
@@ -31,10 +31,63 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from datetime import datetime, timezone
+# -----------------------------------------------------------------------------
+# Environment helpers
+# -----------------------------------------------------------------------------
+def _get_env(key: str, required: bool = False) -> str:
+    value = os.environ.get(key, "").strip().strip('"\'')
+    if required and not value:
+        raise RuntimeError(f"Missing required environment variable: {key}")
+    return value
 
+SUPABASE_URL = _get_env("SUPABASE_URL", required=True)
+SUPABASE_KEY = _get_env("SUPABASE_KEY", required=True)
+SHORTIO_API_KEY = _get_env("SHORTIO_API_KEY", required=True)
+GEMINI_API_KEY = _get_env("GEMINI_API_KEY", required=True)
+
+SHORTIO_DOMAIN = _get_env("SHORTIO_DOMAIN") or "mamachi-engine.s.gy"
+DRY_RUN = _get_env("DRY_RUN").lower() in ("1", "true", "yes")
+ALERT_WEBHOOK_URL = _get_env("ALERT_WEBHOOK_URL")
+
+GEMINI_MODELS: List[str] = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+]
+GEMINI_TIMEOUT_MS = 60_000
+GEMINI_TOTAL_BUDGET_S = 120
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+ai_client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS))
+
+# -----------------------------------------------------------------------------
+# Text helpers
+# -----------------------------------------------------------------------------
+def clean_text(text: str) -> str:
+    """Remove Markdown marks that social sites would show literally."""
+    return " ".join(text.replace("*", "").replace("`", "").split()) if "\n" not in text else \
+        "\n".join(" ".join(line.replace("*", "").replace("`", "").split()) for line in text.splitlines()).strip()
+
+def strip_link(text: str, link: str) -> str:
+    return text.replace(link, "").strip()
+
+# -----------------------------------------------------------------------------
+# Alert helper
+# -----------------------------------------------------------------------------
+def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
+    if not ALERT_WEBHOOK_URL:
+        return
+    payload = {"text": f"🚨 Mamachi Campaign: {message}", "extra": extra or {}}
+    try:
+        requests.post(ALERT_WEBHOOK_URL, json=payload, timeout=8)
+    except Exception as e:
+        logger.warning("Failed to send alert: %s", e)
+
+# -----------------------------------------------------------------------------
+# Hourly & Budget Control Check
+# -----------------------------------------------------------------------------
 def is_hourly_campaign_active(campaign: dict) -> bool:
-    """Checks if an hourly campaign is within its start/end window and budget limits."""
+    """Checks if an hourly/timed campaign is within its start/end window and budget limits."""
     now = datetime.now(timezone.utc)
     
     # 1. Check time window if start/end times are set
@@ -59,67 +112,9 @@ def is_hourly_campaign_active(campaign: dict) -> bool:
         return False
         
     return True
-# -----------------------------------------------------------------------------
-# Environment helpers
-# -----------------------------------------------------------------------------
-def _get_env(key: str, required: bool = False) -> str:
-    value = os.environ.get(key, "").strip().strip('"\'')
-    if required and not value:
-        raise RuntimeError(f"Missing required environment variable: {key}")
-    return value
-
-
-SUPABASE_URL = _get_env("SUPABASE_URL", required=True)
-# IMPORTANT: use the *service_role* key here (GitHub secret only, never in a web page).
-# The anon key is blocked by row-level security when inserting campaign logs.
-SUPABASE_KEY = _get_env("SUPABASE_KEY", required=True)
-SHORTIO_API_KEY = _get_env("SHORTIO_API_KEY", required=True)
-GEMINI_API_KEY = _get_env("GEMINI_API_KEY", required=True)
-
-SHORTIO_DOMAIN = _get_env("SHORTIO_DOMAIN") or "mamachi-engine.s.gy"
-DRY_RUN = _get_env("DRY_RUN").lower() in ("1", "true", "yes")
-ALERT_WEBHOOK_URL = _get_env("ALERT_WEBHOOK_URL")
-
-GEMINI_MODELS: List[str] = [
-    "gemini-3.8-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash",
-]
-GEMINI_TIMEOUT_MS = 60_000      # one request may take at most 60 s
-GEMINI_TOTAL_BUDGET_S = 120     # give up on text generation after 2 minutes
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-ai_client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS))
-
 
 # -----------------------------------------------------------------------------
-# Text helpers
-# -----------------------------------------------------------------------------
-def clean_text(text: str) -> str:
-    """Remove Markdown marks that social sites would show literally."""
-    return " ".join(text.replace("*", "").replace("`", "").split()) if "\n" not in text else \
-        "\n".join(" ".join(line.replace("*", "").replace("`", "").split()) for line in text.splitlines()).strip()
-
-
-def strip_link(text: str, link: str) -> str:
-    return text.replace(link, "").strip()
-
-
-# -----------------------------------------------------------------------------
-# Alert helper
-# -----------------------------------------------------------------------------
-def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
-    if not ALERT_WEBHOOK_URL:
-        return
-    payload = {"text": f"🚨 Mamachi Campaign: {message}", "extra": extra or {}}
-    try:
-        requests.post(ALERT_WEBHOOK_URL, json=payload, timeout=8)
-    except Exception as e:
-        logger.warning("Failed to send alert: %s", e)
-
-
-# -----------------------------------------------------------------------------
-# Short.io (allowDuplicates=False reuses the existing short link for the same URL)
+# Short.io Integration
 # -----------------------------------------------------------------------------
 def shorten_link(original_url: str) -> Dict[str, Any]:
     result = {"short_url": original_url, "shortio_id": None, "raw": None}
@@ -145,17 +140,20 @@ def shorten_link(original_url: str) -> Dict[str, Any]:
         logger.warning("Short.io exception: %s", e)
     return result
 
+# -----------------------------------------------------------------------------
+# Gemini AI Generation with Geo-Targeting Context
+# -----------------------------------------------------------------------------
+def generate_promo(title: str, snippet: str, targeting: Optional[dict] = None) -> str:
+    targeting = targeting or {}
+    cities = ", ".join(targeting.get("target_cities", [])) or "Global"
+    neighborhoods = ", ".join(targeting.get("target_neighborhoods", [])) or "General"
 
-# -----------------------------------------------------------------------------
-# Gemini: fast-fail on bad models, overall time budget, calm static fallback
-# -----------------------------------------------------------------------------
-def generate_promo(title: str, snippet: str, short_link: str) -> str:
     prompt = (
         f"Write a promotional post (2 sentences, under 230 characters, plain text, no Markdown, no asterisks) "
-        f"for the book titled '{title}'.\n"
-        f"Use this manuscript snippet for inspiration:\n{snippet}\n\n"
+        f"for '{title}'. Target location: {cities} ({neighborhoods}).\n"
+        f"Manuscript/Product snippet:\n{snippet}\n\n"
         "Rules: be specific and honest. Do not promise results, income or returns. "
-        "Do not use urgency or fear-of-missing-out phrases. Do not include a link or hashtags.\n"
+        "Do not use fear-of-missing-out phrases. Do not include a link or hashtags.\n"
     )
     logger.info("Generating promo with Gemini...")
     started, last_error = time.time(), None
@@ -176,7 +174,7 @@ def generate_promo(title: str, snippet: str, short_link: str) -> str:
                 last_error = e
                 code = getattr(e, "code", None)
                 logger.warning("Model %s attempt %d failed: %s", model, attempt, e)
-                if code in (400, 401, 403, 404):   # retrying will not help, try the next model
+                if code in (400, 401, 403, 404):
                     break
                 time.sleep(min(2 ** attempt * 3, 20))
 
@@ -184,13 +182,10 @@ def generate_promo(title: str, snippet: str, short_link: str) -> str:
     send_alert("Gemini unavailable, used static fallback promo", {"last_error": str(last_error)})
     return f"New from Mamachi: '{title}'. Take a look at what's inside."
 
-
 # -----------------------------------------------------------------------------
-# Product rotation: promote the product that was promoted longest ago
+# Product Selection & Rotation
 # -----------------------------------------------------------------------------
 def url_is_alive(url: str) -> bool:
-    """False only when the page clearly does not work (no connection, timeout, DNS error, 404/410).
-    Amazon and some sites answer bots with 403/429/5xx, which we treat as 'probably fine'."""
     if not url.startswith("http"):
         return False
     try:
@@ -202,11 +197,13 @@ def url_is_alive(url: str) -> bool:
         logger.warning("Link check failed for %s: %s", url, e)
         return False
 
-
 def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
     exclude = exclude or set()
     rows = supabase.table("mamachi_products").select("*").eq("is_active", True).execute().data or []
-    rows = [r for r in rows if r.get("product_id") not in exclude]
+    
+    # Filter out excluded items and verify active hourly/daily budget windows
+    rows = [r for r in rows if r.get("product_id") not in exclude and is_hourly_campaign_active(r)]
+    
     if not rows:
         return None
     try:
@@ -222,6 +219,7 @@ def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.warning("Rotation history unavailable (%s). Choosing at random.", e)
         return random.choice(rows)
+        
     last: Dict[Any, str] = {}
     for r in logs:
         last.setdefault(r.get("product_id"), r.get("created_at") or "")
@@ -230,9 +228,8 @@ def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
         return random.choice(never)
     return min(rows, key=lambda p: last[p.get("product_id")])
 
-
 # -----------------------------------------------------------------------------
-# Public video URL (Instagram needs one). Uses a PUBLIC Supabase Storage bucket.
+# Public Video Upload
 # -----------------------------------------------------------------------------
 def upload_public_video(path: str) -> Optional[str]:
     bucket = os.environ.get("SUPABASE_VIDEO_BUCKET", "promo-videos")
@@ -243,12 +240,11 @@ def upload_public_video(path: str) -> Optional[str]:
         url = supabase.storage.from_(bucket).get_public_url(name)
         return url if isinstance(url, str) else (url.get("publicUrl") or url.get("publicURL"))
     except Exception as e:
-        logger.warning("Public video upload failed (is the bucket '%s' created and public?): %s", bucket, e)
+        logger.warning("Public video upload failed: %s", e)
         return None
 
-
 # -----------------------------------------------------------------------------
-# Main campaign. Returns True only if something was really published.
+# Main Campaign Runner
 # -----------------------------------------------------------------------------
 def run_campaign() -> bool:
     if DRY_RUN:
@@ -264,38 +260,32 @@ def run_campaign() -> bool:
             break
         logger.error("Destination does not respond, skipping product '%s': %s",
                      cand.get("product_title"), cand.get("destination_url"))
-        send_alert("Product destination link is dead, fix destination_url",
-                   {"product": cand.get("product_title"), "url": cand.get("destination_url")})
         tried.add(cand.get("product_id"))
+
     if not product:
-        logger.error("No active product with a working destination link")
-        send_alert("No active product with a working destination link")
+        logger.error("No active product available under current hourly/daily caps and working destination links")
+        send_alert("No active product available under current hourly/daily caps")
         return False
 
     title = product.get("product_title")
     destination_url = product.get("destination_url")
     manuscript = product.get("manuscript_text") or ""
     product_id = product.get("product_id")
-    if not title or not destination_url:
-        msg = "Product missing product_title or destination_url"
-        logger.error(msg)
-        send_alert(msg, {"product": product})
-        return False
+    
     logger.info("Processing product: %s", title)
 
     short_data = shorten_link(destination_url)
     short_link = short_data["short_url"]
 
     snippet = manuscript[:500] if manuscript else title
-    promo_text = generate_promo(title, snippet, short_link)
+    promo_text = generate_promo(title, snippet, targeting=product)
     body = clean_text(strip_link(promo_text, short_link))
     logger.info("Post text: %s | link: %s", body, short_link)
 
-    tags = product.get("hashtags")             # optional column: "#a #b" or a list
-    style = product.get("image_style") or ""   # optional column: how the images should look
+    tags = product.get("hashtags")
+    style = product.get("image_style") or ""
     tag_list = [t.lstrip("#") for t in (tags.replace(",", " ").split() if isinstance(tags, str) else (tags or []))]
 
-    # Video (only if VIDEO_ENABLED). A public URL is made only when Instagram is configured.
     video_path, video_url = None, None
     try:
         video_path = generate_short_video(title, snippet, short_link, script=body, style=style, tags=tags)
@@ -307,7 +297,6 @@ def run_campaign() -> bool:
     post = Post(title=title, body=body, link=short_link, tags=tag_list,
                 video_path=video_path, video_url=video_url, product_id=product_id)
 
-    # Every configured platform posts; the rest stay 'pending' until their secrets are added.
     statuses = platforms.publish_all(post)
     manual = {}
     if video_path:
@@ -318,7 +307,6 @@ def run_campaign() -> bool:
             if prepare_instagram_package(video_path, title, full, short_link, tags=tags):
                 manual["instagram (manual)"] = ("manual", "package ready in generated_media/")
 
-    # Web channel: always on, no secrets needed.
     web_url = None if DRY_RUN else publish_web(title, body, short_link, tag_list, product_id,
                                                brand=os.environ.get("BRAND_NAME", "Mamachi"))
     manual["web"] = ("posted", f"files written to docs/; live at {web_url} once Pages deploys") if web_url else (("dry-run", "") if DRY_RUN else ("failed", "see log"))
@@ -329,8 +317,7 @@ def run_campaign() -> bool:
         logger.info("[DRY-RUN] Skipping campaign log")
         return True
     if not posted:
-        logger.error("Nothing was published. Check the platform status table above.")
-        send_alert("Run finished but nothing was published", {"product": title})
+        logger.error("Nothing was published.")
         return False
 
     log_entry = {
@@ -346,9 +333,7 @@ def run_campaign() -> bool:
         supabase.table("mamachi_campaign_logs").insert(log_entry).execute()
         logger.info("Campaign logged successfully")
     except Exception as e:
-        hint = " (row-level security: use the service_role key in SUPABASE_KEY)" if "42501" in str(e) else ""
-        logger.error("Failed to log campaign: %s%s", e, hint)
-        send_alert("Failed to insert campaign log" + hint, {"error": str(e)})
+        logger.error("Failed to log campaign: %s", e)
     return True
 
 
