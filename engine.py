@@ -23,9 +23,6 @@ from video_engine import (
     prepare_instagram_package,
 )
 
-# -----------------------------------------------------------------------------
-# Logging Configuration
-# -----------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -33,9 +30,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# -----------------------------------------------------------------------------
-# Environment Helpers
-# -----------------------------------------------------------------------------
 def _get_env(key: str, required: bool = False) -> str:
     value = os.environ.get(key, "").strip().strip('"\'')
     if required and not value:
@@ -61,20 +55,13 @@ GEMINI_TOTAL_BUDGET_S = 120
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 ai_client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS))
 
-# -----------------------------------------------------------------------------
-# Text Helpers
-# -----------------------------------------------------------------------------
 def clean_text(text: str) -> str:
-    """Remove Markdown marks that social sites would show literally."""
     return " ".join(text.replace("*", "").replace("`", "").split()) if "\n" not in text else \
         "\n".join(" ".join(line.replace("*", "").replace("`", "").split()) for line in text.splitlines()).strip()
 
 def strip_link(text: str, link: str) -> str:
     return text.replace(link, "").strip()
 
-# -----------------------------------------------------------------------------
-# Alert Helper
-# -----------------------------------------------------------------------------
 def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     if not ALERT_WEBHOOK_URL:
         return
@@ -84,17 +71,11 @@ def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     except Exception as e:
         logger.warning("Failed to send alert: %s", e)
 
-# -----------------------------------------------------------------------------
-# Hourly & Budget Control Check
-# -----------------------------------------------------------------------------
 def is_hourly_campaign_active(campaign: dict) -> bool:
-    """Checks if a campaign is active, approved by compliance, within its time window, and under budget limits."""
-    # Ensure campaign passed automated moderation
     if campaign.get("compliance_status") != "approved":
         return False
 
     now = datetime.now(timezone.utc)
-    
     start_time = campaign.get("start_time_utc")
     end_time = campaign.get("end_time_utc")
     
@@ -105,7 +86,6 @@ def is_hourly_campaign_active(campaign: dict) -> bool:
         
     hourly_spent = campaign.get("spent_this_hour", 0.0)
     hourly_limit = campaign.get("hourly_limit_usd") or float("inf")
-    
     daily_spent = campaign.get("spent_today", 0.0)
     daily_limit = campaign.get("daily_limit_usd") or float("inf")
     
@@ -114,14 +94,7 @@ def is_hourly_campaign_active(campaign: dict) -> bool:
         
     return True
 
-# -----------------------------------------------------------------------------
-# Global Safety & Social Norm Moderation
-# -----------------------------------------------------------------------------
 def check_global_ad_compliance(product_title: str, manuscript_text: str, destination_url: str) -> dict:
-    """
-    Evaluates submissions against international social norms, safety policies,
-    and major social network advertising standards (Meta, TikTok, YouTube).
-    """
     prompt = f"""
     You are an automated ad compliance officer. Review this advertisement submission:
     - Product/Service Title: {product_title}
@@ -140,7 +113,6 @@ def check_global_ad_compliance(product_title: str, manuscript_text: str, destina
         "reason": "Detailed explanation if rejected, or 'Approved' if fully compliant"
     }}
     """
-    
     try:
         response = ai_client.models.generate_content(
             model="gemini-2.5-flash",
@@ -152,9 +124,6 @@ def check_global_ad_compliance(product_title: str, manuscript_text: str, destina
         logger.warning("Compliance check error: %s", e)
         return {"is_approved": False, "reason": "Moderation service check failed"}
 
-# -----------------------------------------------------------------------------
-# Short.io Integration
-# -----------------------------------------------------------------------------
 def shorten_link(original_url: str) -> Dict[str, Any]:
     result = {"short_url": original_url, "shortio_id": None, "raw": None}
     if not SHORTIO_API_KEY:
@@ -179,9 +148,6 @@ def shorten_link(original_url: str) -> Dict[str, Any]:
         logger.warning("Short.io exception: %s", e)
     return result
 
-# -----------------------------------------------------------------------------
-# Gemini AI Promotional Copy Generation
-# -----------------------------------------------------------------------------
 def generate_promo(title: str, snippet: str, targeting: Optional[dict] = None) -> str:
     targeting = targeting or {}
     cities = ", ".join(targeting.get("target_cities", [])) or "Global"
@@ -221,9 +187,6 @@ def generate_promo(title: str, snippet: str, targeting: Optional[dict] = None) -
     send_alert("Gemini unavailable, used static fallback promo", {"last_error": str(last_error)})
     return f"New from Mamachi: '{title}'. Explore what's available today."
 
-# -----------------------------------------------------------------------------
-# Product Selection & Rotation
-# -----------------------------------------------------------------------------
 def url_is_alive(url: str) -> bool:
     if not url.startswith("http"):
         return False
@@ -239,7 +202,6 @@ def url_is_alive(url: str) -> bool:
 def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
     exclude = exclude or set()
     rows = supabase.table("mamachi_products").select("*").eq("is_active", True).execute().data or []
-    
     rows = [r for r in rows if r.get("product_id") not in exclude and is_hourly_campaign_active(r)]
     
     if not rows:
@@ -266,9 +228,6 @@ def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
         return random.choice(never)
     return min(rows, key=lambda p: last[p.get("product_id")])
 
-# -----------------------------------------------------------------------------
-# Public Video Upload
-# -----------------------------------------------------------------------------
 def upload_public_video(path: str) -> Optional[str]:
     bucket = os.environ.get("SUPABASE_VIDEO_BUCKET", "promo-videos")
     name = Path(path).name
@@ -281,19 +240,8 @@ def upload_public_video(path: str) -> Optional[str]:
         logger.warning("Public video upload failed: %s", e)
         return None
 
-# -----------------------------------------------------------------------------
-# Omnichannel Publishing Engine
-# -----------------------------------------------------------------------------
 async def publish_omnichannel_campaign(campaign: dict, generated_asset: dict) -> None:
-    """
-    Publishes generated promotional content across all 3 destination layers:
-    1. Mamachi Web Feed
-    2. Mamachi Owned Social Networks
-    3. Customer's Social Channels (if tokens provided)
-    """
     product_id = campaign["product_id"]
-    
-    # Channel 1: Record to Mamachi Web Feed database
     try:
         supabase.table("mamachi_campaign_logs").insert({
             "product_id": product_id,
@@ -306,16 +254,10 @@ async def publish_omnichannel_campaign(campaign: dict, generated_asset: dict) ->
     except Exception as e:
         logger.error("Failed to log web publication: %s", e)
 
-    # Channel 2: Mamachi Official Network Social Channels
     logger.info("Dispatched to Mamachi Official TikTok, Instagram, and YouTube channels")
-
-    # Channel 3: Customer's Own Social Channels
     if campaign.get("customer_social_tokens"):
         logger.info("Cross-posted to customer's connected social channels")
 
-# -----------------------------------------------------------------------------
-# Main Campaign Runner
-# -----------------------------------------------------------------------------
 def run_campaign() -> bool:
     if DRY_RUN:
         logger.info("=== DRY-RUN MODE: no real posts or DB writes ===")
@@ -390,7 +332,6 @@ def run_campaign() -> bool:
         logger.error("Nothing was published.")
         return False
 
-    # Run omnichannel async publication wrapper
     try:
         asset_payload = {
             "caption": body,
@@ -417,9 +358,6 @@ def run_campaign() -> bool:
         logger.error("Failed to log campaign: %s", e)
     return True
 
-# -----------------------------------------------------------------------------
-# Script Entrypoint
-# -----------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
         ok = run_campaign()
