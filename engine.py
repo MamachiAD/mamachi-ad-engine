@@ -11,18 +11,13 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 BRAND_NAME = os.environ.get("BRAND_NAME", "Mamachi")
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
 
-def slugify(text: str) -> str:
-    text = text.lower()
-    text = re.sub(r'[^a-z0-9\s-]', '', text)
-    return re.sub(r'[\s-]+', '-', text).strip('-')[:50]
-
 def get_supabase_client() -> Client:
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("⚠️ Supabase credentials missing. Running in mock/dry mode.")
         return None
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def generate_web_post(product: dict) -> str:
+def generate_web_post(product: dict) -> tuple:
     title = product.get("product_title", "Mamachi Featured Promotion")
     body = product.get("manuscript_text", "Discover how Mamachi automates round-the-clock organic promotion for authors and digital creators.")
     link = product.get("destination_url", "https://mamachiad.github.io/mamachi-ad-engine/advertise.html")
@@ -40,7 +35,6 @@ def generate_web_post(product: dict) -> str:
     filepath = posts_dir / filename
     
     hero_img = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80"
-    video_cover = "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1600&q=80"
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
@@ -49,6 +43,17 @@ def generate_web_post(product: dict) -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title} - {BRAND_NAME} Intelligence Feed</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {{
+            darkMode: 'class',
+            theme: {{
+                extend: {{
+                    colors: {{ brand: {{ 500: '#0ea5e9', 600: '#0284c7' }} }},
+                    fontFamily: {{ sans: ['Inter', 'sans-serif'] }}
+                }}
+            }}
+        }}
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -126,11 +131,11 @@ def update_main_feed(posts: list):
                 <div class="relative aspect-video overflow-hidden">
                     <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
                     <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Verified Campaign
+                        Verified Active
                     </div>
                 </div>
                 <div class="p-6 space-y-3">
-                    <span class="text-xs font-semibold text-sky-400">Active Intelligence Feed</span>
+                    <span class="text-xs font-semibold text-sky-400">Mamachi Intelligence Feed</span>
                     <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
                         {p['title']}
                     </h3>
@@ -157,7 +162,18 @@ def update_main_feed(posts: list):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{BRAND_NAME} Intelligence Feed & Automated Ads</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {{
+            darkMode: 'class',
+            theme: {{
+                extend: {{
+                    colors: {{ brand: {{ 500: '#0ea5e9', 600: '#0284c7' }} }},
+                    fontFamily: {{ sans: ['Inter', 'sans-serif'] }}
+                }}
+            }}
+        }}
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .glass-panel {{ background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }}
