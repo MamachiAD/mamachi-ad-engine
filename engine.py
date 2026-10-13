@@ -10,9 +10,13 @@ from google import genai
 from google.genai import types
 from supabase import Client, create_client
 
+from pathlib import Path
+
+import platforms
+from platforms import Post
+from web_publish import publish_web
 from video_engine import (
     generate_short_video,
-    post_to_youtube_shorts,
     prepare_tiktok_package,
     prepare_instagram_package,
 )
@@ -45,18 +49,9 @@ SUPABASE_KEY = _get_env("SUPABASE_KEY", required=True)
 SHORTIO_API_KEY = _get_env("SHORTIO_API_KEY", required=True)
 GEMINI_API_KEY = _get_env("GEMINI_API_KEY", required=True)
 
-FB_PAGE_ACCESS_TOKEN = _get_env("FB_PAGE_ACCESS_TOKEN")
-FB_PAGE_ID = _get_env("FB_PAGE_ID")
-FB_API_VERSION = _get_env("FB_API_VERSION") or "v23.0"  # check Meta's changelog for the current version
-LINKEDIN_ACCESS_TOKEN = _get_env("LINKEDIN_ACCESS_TOKEN")
-LINKEDIN_AUTHOR_URN = _get_env("LINKEDIN_AUTHOR_URN")
-# Must be an OAuth 2.0 *user-context* token with tweet.write. An app-only bearer token cannot post.
-X_BEARER_TOKEN = _get_env("X_BEARER_TOKEN")
-
 SHORTIO_DOMAIN = _get_env("SHORTIO_DOMAIN") or "mamachi-engine.s.gy"
 DRY_RUN = _get_env("DRY_RUN").lower() in ("1", "true", "yes")
 ALERT_WEBHOOK_URL = _get_env("ALERT_WEBHOOK_URL")
-DISCLAIMER = _get_env("DISCLAIMER")  # optional, e.g. "Not financial advice." (added to Facebook/LinkedIn)
 
 GEMINI_MODELS: List[str] = [
     "gemini-3.8-flash",
@@ -73,9 +68,6 @@ ai_client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(
 # -----------------------------------------------------------------------------
 # Text helpers
 # -----------------------------------------------------------------------------
-X_URL_LEN = 23  # X counts every link as 23 characters
-
-
 def clean_text(text: str) -> str:
     """Remove Markdown marks that social sites would show literally."""
     return " ".join(text.replace("*", "").replace("`", "").split()) if "\n" not in text else \
@@ -84,14 +76,6 @@ def clean_text(text: str) -> str:
 
 def strip_link(text: str, link: str) -> str:
     return text.replace(link, "").strip()
-
-
-def fit_for_x(body: str, link: str, limit: int = 280) -> str:
-    room = limit - X_URL_LEN - 1
-    body = " ".join(body.split())
-    if len(body) > room:
-        body = body[: room - 1].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
-    return f"{body} {link}"
 
 
 # -----------------------------------------------------------------------------
@@ -105,91 +89,6 @@ def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
         requests.post(ALERT_WEBHOOK_URL, json=payload, timeout=8)
     except Exception as e:
         logger.warning("Failed to send alert: %s", e)
-
-
-# -----------------------------------------------------------------------------
-# Social posting (all optional)
-# -----------------------------------------------------------------------------
-def post_to_facebook(body: str, link: str) -> bool:
-    if DRY_RUN:
-        logger.info("[DRY-RUN] Would post to Facebook")
-        return True
-    if not (FB_PAGE_ACCESS_TOKEN and FB_PAGE_ID):
-        logger.info("Facebook credentials not set — skipping")
-        return False
-    message = f"{body}\n\n{DISCLAIMER}" if DISCLAIMER else body
-    try:
-        response = requests.post(
-            f"https://graph.facebook.com/{FB_API_VERSION}/{FB_PAGE_ID}/feed",
-            data={"message": message, "link": link, "access_token": FB_PAGE_ACCESS_TOKEN},
-            timeout=15,
-        )
-        if response.status_code == 200:
-            logger.info("Posted to Facebook")
-            return True
-        logger.error("Facebook error (%s): %s", response.status_code, response.text)
-    except Exception as e:
-        logger.exception("Facebook exception: %s", e)
-    return False
-
-
-def post_to_linkedin(body: str, link: str) -> bool:
-    if DRY_RUN:
-        logger.info("[DRY-RUN] Would post to LinkedIn")
-        return True
-    if not (LINKEDIN_ACCESS_TOKEN and LINKEDIN_AUTHOR_URN):
-        logger.info("LinkedIn credentials not set — skipping")
-        return False
-    text = f"{body}\n\n{DISCLAIMER}" if DISCLAIMER else body
-    headers = {
-        "Authorization": f"Bearer {LINKEDIN_ACCESS_TOKEN}",
-        "Content-Type": "application/json",
-        "X-Restli-Protocol-Version": "2.0.0",
-    }
-    payload = {
-        "author": LINKEDIN_AUTHOR_URN,
-        "lifecycleState": "PUBLISHED",
-        "specificContent": {
-            "com.linkedin.ugc.ShareContent": {
-                "shareCommentary": {"text": text},
-                "shareMediaCategory": "ARTICLE",
-                "media": [{"status": "READY", "originalUrl": link}],
-            }
-        },
-        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
-    }
-    try:
-        response = requests.post("https://api.linkedin.com/v2/ugcPosts", json=payload, headers=headers, timeout=15)
-        if response.status_code in (200, 201):
-            logger.info("Posted to LinkedIn")
-            return True
-        logger.error("LinkedIn error (%s): %s", response.status_code, response.text)
-    except Exception as e:
-        logger.exception("LinkedIn exception: %s", e)
-    return False
-
-
-def post_to_x(body: str, link: str) -> bool:
-    if DRY_RUN:
-        logger.info("[DRY-RUN] Would post to X")
-        return True
-    if not X_BEARER_TOKEN:
-        logger.info("X credentials not set — skipping")
-        return False
-    try:
-        response = requests.post(
-            "https://api.twitter.com/2/tweets",
-            json={"text": fit_for_x(body, link)},
-            headers={"Authorization": f"Bearer {X_BEARER_TOKEN}", "Content-Type": "application/json"},
-            timeout=15,
-        )
-        if response.status_code in (200, 201):
-            logger.info("Posted to X")
-            return True
-        logger.error("X error (%s): %s", response.status_code, response.text)
-    except Exception as e:
-        logger.exception("X exception: %s", e)
-    return False
 
 
 # -----------------------------------------------------------------------------
@@ -289,6 +188,22 @@ def pick_product() -> Optional[Dict[str, Any]]:
 
 
 # -----------------------------------------------------------------------------
+# Public video URL (Instagram needs one). Uses a PUBLIC Supabase Storage bucket.
+# -----------------------------------------------------------------------------
+def upload_public_video(path: str) -> Optional[str]:
+    bucket = os.environ.get("SUPABASE_VIDEO_BUCKET", "promo-videos")
+    name = Path(path).name
+    try:
+        with open(path, "rb") as f:
+            supabase.storage.from_(bucket).upload(name, f.read(), {"content-type": "video/mp4", "upsert": "true"})
+        url = supabase.storage.from_(bucket).get_public_url(name)
+        return url if isinstance(url, str) else (url.get("publicUrl") or url.get("publicURL"))
+    except Exception as e:
+        logger.warning("Public video upload failed (is the bucket '%s' created and public?): %s", bucket, e)
+        return None
+
+
+# -----------------------------------------------------------------------------
 # Main campaign. Returns True only if something was really published.
 # -----------------------------------------------------------------------------
 def run_campaign() -> bool:
@@ -310,7 +225,6 @@ def run_campaign() -> bool:
         logger.error(msg)
         send_alert(msg, {"product": product})
         return False
-
     logger.info("Processing product: %s", title)
 
     short_data = shorten_link(destination_url)
@@ -321,38 +235,45 @@ def run_campaign() -> bool:
     body = clean_text(strip_link(promo_text, short_link))
     logger.info("Post text: %s | link: %s", body, short_link)
 
-    results = {
-        "facebook": post_to_facebook(body, short_link),
-        "linkedin": post_to_linkedin(body, short_link),
-        "x": post_to_x(body, short_link),
-    }
-    posted = [p for p, ok in results.items() if ok]
-    logger.info("Text platforms posted: %s", ", ".join(posted) if posted else "none")
+    tags = product.get("hashtags")             # optional column: "#a #b" or a list
+    style = product.get("image_style") or ""   # optional column: how the images should look
+    tag_list = [t.lstrip("#") for t in (tags.replace(",", " ").split() if isinstance(tags, str) else (tags or []))]
 
-    video_path, youtube_ok = None, False
-    tags = product.get("hashtags")            # optional column: "#a #b" or a list
-    style = product.get("image_style") or ""  # optional column: how the images should look
+    # Video (only if VIDEO_ENABLED). A public URL is made only when Instagram is configured.
+    video_path, video_url = None, None
     try:
         video_path = generate_short_video(title, snippet, short_link, script=body, style=style, tags=tags)
-        if video_path:
-            logger.info("Short video ready: %s", video_path)
-            full = f"{body}\n\n{short_link}"
-            youtube_ok = bool(post_to_youtube_shorts(video_path, title, full, tags=tags))
-            if youtube_ok:
-                posted.append("youtube")
-            prepare_tiktok_package(video_path, title, full, short_link, tags=tags)
-            prepare_instagram_package(video_path, title, full, short_link, tags=tags)
-        else:
-            logger.warning("No video was produced")
+        if video_path and platforms.is_active("instagram") and not DRY_RUN:
+            video_url = upload_public_video(video_path)
     except Exception as e:
         logger.exception("Multi-media generation failed: %s", e)
 
-    published_any = bool(posted)
+    post = Post(title=title, body=body, link=short_link, tags=tag_list,
+                video_path=video_path, video_url=video_url, product_id=product_id)
+
+    # Every configured platform posts; the rest stay 'pending' until their secrets are added.
+    statuses = platforms.publish_all(post)
+    manual = {}
+    if video_path:
+        full = f"{body}\n\n{short_link}"
+        if prepare_tiktok_package(video_path, title, full, short_link, tags=tags):
+            manual["tiktok"] = ("manual", "package ready in generated_media/")
+        if statuses.get("instagram", ("",))[0] in ("pending", "failed", "skipped"):
+            if prepare_instagram_package(video_path, title, full, short_link, tags=tags):
+                manual["instagram (manual)"] = ("manual", "package ready in generated_media/")
+
+    # Web channel: always on, no secrets needed.
+    web_url = None if DRY_RUN else publish_web(title, body, short_link, tag_list, product_id,
+                                               brand=os.environ.get("BRAND_NAME", "Mamachi"))
+    manual["web"] = ("posted", web_url or "docs/ updated") if web_url else (("dry-run", "") if DRY_RUN else ("failed", "see log"))
+    platforms.write_summary(statuses, manual)
+
+    posted = [n for n, s in {**statuses, **manual}.items() if s[0] == "posted"]
     if DRY_RUN:
         logger.info("[DRY-RUN] Skipping campaign log")
         return True
-    if not published_any:
-        logger.error("Nothing was published. Check platform secrets and the errors above.")
+    if not posted:
+        logger.error("Nothing was published. Check the platform status table above.")
         send_alert("Run finished but nothing was published", {"product": title})
         return False
 
