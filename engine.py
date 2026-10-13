@@ -33,7 +33,6 @@ def generate_web_post(product: dict) -> tuple:
     posts_dir.mkdir(parents=True, exist_ok=True)
     
     filepath = posts_dir / filename
-    
     hero_img = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80"
 
     html_content = f"""<!DOCTYPE html>
@@ -85,14 +84,14 @@ def generate_web_post(product: dict) -> tuple:
                 {category.replace('_', ' ').title()}
             </span>
             <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">{title}</h1>
-            <p class="text-xs text-slate-400">{date_str} &bull; Verified AI Campaign</p>
+            <p class="text-xs text-slate-400">{date_str} &bull; Verified AI Campaign &bull; Syndicated Globally</p>
         </div>
 
         <div class="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-800 aspect-video">
             <img src="{hero_img}" alt="{title}" class="w-full h-full object-cover">
             <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
             <div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">Active Promotion</span>
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">Active Omnichannel Promotion</span>
                 <a href="{link}" target="_blank" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-2xl">
                     ⚡ GET IT HERE
                 </a>
@@ -109,8 +108,119 @@ def generate_web_post(product: dict) -> tuple:
                 </a>
             </div>
         </div>
+
+        <!-- Omnichannel Social Preview Tabs -->
+        <div class="space-y-6 p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
+            <div class="text-center space-y-2">
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest bg-sky-500/10 px-3.5 py-1 rounded-full border border-sky-500/20">Omnichannel Ad Engine Preview</span>
+                <h3 class="text-xl font-black text-white">How This Post Converts Across Social Platforms</h3>
+                <p class="text-xs text-slate-400">Automatically syndicated with custom hashtags, short tracking links, and rich media.</p>
+            </div>
+            
+            <div class="flex flex-wrap justify-center gap-2 border-b border-slate-800 pb-4">
+                <button onclick="switchTab('youtube')" id="tab-youtube" class="px-4 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="youtube" class="w-4 h-4"></i> YouTube</button>
+                <button onclick="switchTab('instagram')" id="tab-instagram" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="instagram" class="w-4 h-4"></i> Instagram</button>
+                <button onclick="switchTab('tiktok')" id="tab-tiktok" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="video" class="w-4 h-4"></i> TikTok</button>
+                <button onclick="switchTab('facebook')" id="tab-facebook" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="facebook" class="w-4 h-4"></i> Facebook</button>
+                <button onclick="switchTab('twitter')" id="tab-twitter" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="twitter" class="w-4 h-4"></i> X / Twitter</button>
+            </div>
+
+            <!-- YouTube Tab Content -->
+            <div id="content-youtube" class="platform-content space-y-4">
+                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <span class="text-xs font-bold text-red-400 uppercase">YouTube Shorts / Video Ad Caption</span>
+                    <p class="text-sm text-white font-medium">{title} — Streamlining autonomous growth. Check out the full offering below! 🚀</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
+                        <span>#AI</span><span>#MarketingAutomation</span><span>#{category.replace('_', '')}</span><span>#Mamachi</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                        <span>Short Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
+                        <span class="text-emerald-400 font-bold">● Active 24/7</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instagram Tab Content -->
+            <div id="content-instagram" class="platform-content space-y-4" style="display:none;">
+                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <span class="text-xs font-bold text-pink-400 uppercase">Instagram Reel & Feed Post</span>
+                    <p class="text-sm text-white font-medium">✨ {title} is now live! Transform your promotional reach with hyper-local AI precision. Link in bio & below!</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
+                        <span>#DigitalCreator</span><span>#BookMarketing</span><span>#GrowthHacking</span><span>#MamachiAds</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                        <span>Targeting Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
+                        <span class="text-emerald-400 font-bold">● Active 24/7</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TikTok Tab Content -->
+            <div id="content-tiktok" class="platform-content space-y-4" style="display:none;">
+                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <span class="text-xs font-bold text-cyan-400 uppercase">TikTok Viral Ad Brief</span>
+                    <p class="text-sm text-white font-medium">How {title} is changing the game for creators everywhere 📈 Tap to explore.</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
+                        <span>#LearnOnTikTok</span><span>#TechTrends</span><span>#Creators</span><span>#Mamachi</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                        <span>Promo Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
+                        <span class="text-emerald-400 font-bold">● Active 24/7</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Facebook Tab Content -->
+            <div id="content-facebook" class="platform-content space-y-4" style="display:none;">
+                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <span class="text-xs font-bold text-blue-400 uppercase">Facebook Page Campaign Post</span>
+                    <p class="text-sm text-white font-medium">📢 Now Available: {title}. Explore our latest verified release designed to scale your brand organically across global channels.</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
+                        <span>#BusinessGrowth</span><span>#Publishing</span><span>#MamachiEngine</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                        <span>Secure URL: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
+                        <span class="text-emerald-400 font-bold">● Active 24/7</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Twitter/X Tab Content -->
+            <div id="content-twitter" class="platform-content space-y-4" style="display:none;">
+                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <span class="text-xs font-bold text-sky-400 uppercase">X / Twitter Post & Thread</span>
+                    <p class="text-sm text-white font-medium">⚡ Automated Release: {title}. Experience 24/7 omnichannel promotion with hyper-local geo-targeting. 🧵👇</p>
+                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
+                        <span>#AIgrowth</span><span>#IndieHacker</span><span>#Mamachi</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                        <span>Access Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
+                        <span class="text-emerald-400 font-bold">● Active 24/7</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
-    <script>lucide.createIcons();</script>
+
+    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
+        <p>&copy; 2026 {BRAND_NAME} Automated Advertising Engine. All rights reserved.</p>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        function switchTab(platform) {{
+            ['youtube', 'instagram', 'tiktok', 'facebook', 'twitter'].forEach(p => {{
+                const content = document.getElementById('content-' + p);
+                const tab = document.getElementById('tab-' + p);
+                if (content && tab) {{
+                    content.style.display = (p === platform) ? 'block' : 'none';
+                    tab.className = (p === platform) ? 
+                        'px-4 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5' : 
+                        'px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5';
+                }}
+            }});
+        }}
+    </script>
 </body>
 </html>
 """
@@ -268,7 +378,7 @@ def main():
         print(f"✅ Published web post: {title}")
         
     update_main_feed(published_posts)
-    print("✨ Intelligence Feed updated successfully in docs/")
+    print("✨ Intelligence Feed & Social Tabs updated successfully in docs/")
 
 if __name__ == "__main__":
     main()
