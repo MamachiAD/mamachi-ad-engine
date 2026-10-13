@@ -1,425 +1,258 @@
 import os
-import sys
-import time
-import random
-import logging
 import json
-import asyncio
-from datetime import datetime, timezone
-from typing import Optional, Any, Dict, List
+import re
+from datetime import datetime
 from pathlib import Path
+from supabase import create_client, Client
 
-import requests
-from google import genai
-from google.genai import types
-from supabase import Client, create_client
+# --- ENVIRONMENT CONFIG ---
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+BRAND_NAME = os.environ.get("BRAND_NAME", "Mamachi")
+DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
 
-import platforms
-from platforms import Post
-from web_publish import publish_web
-from video_engine import (
-    generate_short_video,
-    prepare_tiktok_package,
-    prepare_instagram_package,
-)
+def slugify(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r'[^a-z0-9\s-]', '', text)
+    return re.sub(r'[\s-]+', '-', text).strip('-')[:50]
 
-# -----------------------------------------------------------------------------
-# Logging Configuration
-# -----------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
-# -----------------------------------------------------------------------------
-# Environment Helpers
-# -----------------------------------------------------------------------------
-def _get_env(key: str, required: bool = False) -> str:
-    value = os.environ.get(key, "").strip().strip('"\'')
-    if required and not value:
-        raise RuntimeError(f"Missing required environment variable: {key}")
-    return value
-
-SUPABASE_URL = _get_env("SUPABASE_URL", required=True)
-SUPABASE_KEY = _get_env("SUPABASE_KEY", required=True)
-SHORTIO_API_KEY = _get_env("SHORTIO_API_KEY", required=True)
-GEMINI_API_KEY = _get_env("GEMINI_API_KEY", required=True)
-
-SHORTIO_DOMAIN = _get_env("SHORTIO_DOMAIN") or "mamachi-engine.s.gy"
-DRY_RUN = _get_env("DRY_RUN").lower() in ("1", "true", "yes")
-ALERT_WEBHOOK_URL = _get_env("ALERT_WEBHOOK_URL")
-
-GEMINI_MODELS: List[str] = [
-    "gemini-2.5-flash",
-    "gemini-1.5-flash",
-]
-GEMINI_TIMEOUT_MS = 60_000
-GEMINI_TOTAL_BUDGET_S = 120
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-ai_client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS))
-
-# -----------------------------------------------------------------------------
-# Text Helpers
-# -----------------------------------------------------------------------------
-def clean_text(text: str) -> str:
-    """Remove Markdown marks that social sites would show literally."""
-    return " ".join(text.replace("*", "").replace("`", "").split()) if "\n" not in text else \
-        "\n".join(" ".join(line.replace("*", "").replace("`", "").split()) for line in text.splitlines()).strip()
-
-def strip_link(text: str, link: str) -> str:
-    return text.replace(link, "").strip()
-
-# -----------------------------------------------------------------------------
-# Alert Helper
-# -----------------------------------------------------------------------------
-def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
-    if not ALERT_WEBHOOK_URL:
-        return
-    payload = {"text": f"🚨 Mamachi Campaign: {message}", "extra": extra or {}}
-    try:
-        requests.post(ALERT_WEBHOOK_URL, json=payload, timeout=8)
-    except Exception as e:
-        logger.warning("Failed to send alert: %s", e)
-
-# -----------------------------------------------------------------------------
-# Hourly & Budget Control Check
-# -----------------------------------------------------------------------------
-def is_hourly_campaign_active(campaign: dict) -> bool:
-    if campaign.get("compliance_status") != "approved":
-        return False
-
-    now = datetime.now(timezone.utc)
-    start_time = campaign.get("start_time_utc")
-    end_time = campaign.get("end_time_utc")
-    
-    if start_time and now < datetime.fromisoformat(start_time):
-        return False
-    if end_time and now > datetime.fromisoformat(end_time):
-        return False
-        
-    hourly_spent = campaign.get("spent_this_hour", 0.0)
-    hourly_limit = campaign.get("hourly_limit_usd") or float("inf")
-    daily_spent = campaign.get("spent_today", 0.0)
-    daily_limit = campaign.get("daily_limit_usd") or float("inf")
-    
-    if hourly_spent >= hourly_limit or daily_spent >= daily_limit:
-        return False
-        
-    return True
-
-# -----------------------------------------------------------------------------
-# Global Safety & Social Norm Moderation
-# -----------------------------------------------------------------------------
-def check_global_ad_compliance(product_title: str, manuscript_text: str, destination_url: str) -> dict:
-    prompt = f"""
-    You are an automated ad compliance officer. Review this advertisement submission:
-    - Product/Service Title: {product_title}
-    - Details/Manuscript: {manuscript_text}
-    - Destination URL: {destination_url}
-
-    Evaluate whether this content complies with global social norms and advertising policies.
-    REJECT immediately if it contains:
-    1. Adult content, hate speech, harassment, or violence.
-    2. Deceptive financial schemes, illegal products, or scams.
-    3. Culturally offensive or dangerous material.
-
-    Respond STRICTLY in JSON format:
-    {{
-        "is_approved": true or false,
-        "reason": "Detailed explanation if rejected, or 'Approved' if fully compliant"
-    }}
-    """
-    try:
-        response = ai_client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
-        return json.loads(response.text)
-    except Exception as e:
-        logger.warning("Compliance check error: %s", e)
-        return {"is_approved": False, "reason": "Moderation service check failed"}
-
-# -----------------------------------------------------------------------------
-# Short.io Integration
-# -----------------------------------------------------------------------------
-def shorten_link(original_url: str) -> Dict[str, Any]:
-    result = {"short_url": original_url, "shortio_id": None, "raw": None}
-    if not SHORTIO_API_KEY:
-        logger.warning("SHORTIO_API_KEY missing — using original URL")
-        return result
-    try:
-        response = requests.post(
-            "https://api.short.io/links",
-            json={"originalURL": original_url, "domain": SHORTIO_DOMAIN, "allowDuplicates": False},
-            headers={"Authorization": SHORTIO_API_KEY, "Content-Type": "application/json", "Accept": "application/json"},
-            timeout=10,
-        )
-        if response.status_code in (200, 201):
-            data = response.json()
-            short = data.get("secureShortURL") or data.get("shortURL")
-            if short:
-                result.update(short_url=short, shortio_id=data.get("idString") or data.get("id"), raw=data)
-                logger.info("Short link ready: %s", short)
-                return result
-        logger.warning("Short.io failed (%s): %s", response.status_code, response.text)
-    except Exception as e:
-        logger.warning("Short.io exception: %s", e)
-    return result
-
-# -----------------------------------------------------------------------------
-# Gemini AI Promotional Copy Generation (Safe Targeting Handler)
-# -----------------------------------------------------------------------------
-def generate_promo(title: str, snippet: str, targeting: Optional[dict] = None) -> str:
-    targeting = targeting or {}
-    
-    # Safe type conversion for targeting fields
-    raw_cities = targeting.get("target_cities", [])
-    if isinstance(raw_cities, str):
-        cities_list = [c.strip() for c in raw_cities.split(",") if c.strip()]
-    elif isinstance(raw_cities, list):
-        cities_list = [str(c).strip() for c in raw_cities if c]
-    else:
-        cities_list = []
-    cities = ", ".join(cities_list) or "Global"
-
-    raw_neighborhoods = targeting.get("target_neighborhoods", [])
-    if isinstance(raw_neighborhoods, str):
-        neigh_list = [n.strip() for n in raw_neighborhoods.split(",") if n.strip()]
-    elif isinstance(raw_neighborhoods, list):
-        neigh_list = [str(n).strip() for n in raw_neighborhoods if n]
-    else:
-        neigh_list = []
-    neighborhoods = ", ".join(neigh_list) or "General"
-
-    prompt = (
-        f"Write a promotional post (2 sentences, under 230 characters, plain text, no Markdown, no asterisks) "
-        f"for '{title}'. Target location: {cities} ({neighborhoods}).\n"
-        f"Product/Service details:\n{snippet}\n\n"
-        "Rules: be specific and honest. Do not promise results, income or returns. "
-        "Do not use fear-of-missing-out phrases. Do not include a link or hashtags.\n"
-    )
-    logger.info("Generating promo with Gemini...")
-    started, last_error = time.time(), None
-
-    for model in GEMINI_MODELS:
-        for attempt in range(1, 4):
-            if time.time() - started > GEMINI_TOTAL_BUDGET_S:
-                logger.error("Gemini time budget used up")
-                break
-            try:
-                response = ai_client.models.generate_content(model=model, contents=prompt)
-                text = clean_text((response.text or "").strip())
-                if text:
-                    logger.info("Promo generated with model %s in %.0fs", model, time.time() - started)
-                    return text
-                raise ValueError("Empty response from Gemini")
-            except Exception as e:
-                last_error = e
-                code = getattr(e, "code", None)
-                logger.warning("Model %s attempt %d failed: %s", model, attempt, e)
-                if code in (400, 401, 403, 404):
-                    break
-                time.sleep(min(2 ** attempt * 3, 20))
-
-    logger.error("All Gemini models failed. Using static fallback. Last error: %s", last_error)
-    send_alert("Gemini unavailable, used static fallback promo", {"last_error": str(last_error)})
-    return f"New from Mamachi: '{title}'. Explore what's available today."
-
-# -----------------------------------------------------------------------------
-# Product Selection & Rotation
-# -----------------------------------------------------------------------------
-def url_is_alive(url: str) -> bool:
-    if not url.startswith("http"):
-        return False
-    try:
-        r = requests.get(url, timeout=12, allow_redirects=True, stream=True,
-                         headers={"User-Agent": "Mozilla/5.0 (compatible; MamachiLinkCheck/1.0)"})
-        r.close()
-        return r.status_code not in (404, 410)
-    except requests.exceptions.RequestException as e:
-        logger.warning("Link check failed for %s: %s", url, e)
-        return False
-
-def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
-    exclude = exclude or set()
-    rows = supabase.table("mamachi_products").select("*").eq("is_active", True).execute().data or []
-    rows = [r for r in rows if r.get("product_id") not in exclude and is_hourly_campaign_active(r)]
-    
-    if not rows:
+def get_supabase_client() -> Client:
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        print("⚠️ Supabase credentials missing. Running in mock/dry mode.")
         return None
-    try:
-        logs = (
-            supabase.table("mamachi_campaign_logs")
-            .select("product_id,created_at")
-            .order("created_at", desc=True)
-            .limit(500)
-            .execute()
-            .data
-            or []
-        )
-    except Exception as e:
-        logger.warning("Rotation history unavailable (%s). Choosing at random.", e)
-        return random.choice(rows)
-        
-    last: Dict[Any, str] = {}
-    for r in logs:
-        last.setdefault(r.get("product_id"), r.get("created_at") or "")
-    never = [p for p in rows if p.get("product_id") not in last]
-    if never:
-        return random.choice(never)
-    return min(rows, key=lambda p: last[p.get("product_id")])
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# -----------------------------------------------------------------------------
-# Public Video Upload
-# -----------------------------------------------------------------------------
-def upload_public_video(path: str) -> Optional[str]:
-    bucket = os.environ.get("SUPABASE_VIDEO_BUCKET", "promo-videos")
-    name = Path(path).name
-    try:
-        with open(path, "rb") as f:
-            supabase.storage.from_(bucket).upload(name, f.read(), {"content-type": "video/mp4", "upsert": "true"})
-        url = supabase.storage.from_(bucket).get_public_url(name)
-        return url if isinstance(url, str) else (url.get("publicUrl") or url.get("publicURL"))
-    except Exception as e:
-        logger.warning("Public video upload failed: %s", e)
-        return None
-
-# -----------------------------------------------------------------------------
-# Omnichannel Publishing Engine
-# -----------------------------------------------------------------------------
-async def publish_omnichannel_campaign(campaign: dict, generated_asset: dict) -> None:
-    product_id = campaign["product_id"]
-    try:
-        supabase.table("mamachi_campaign_logs").insert({
-            "product_id": product_id,
-            "platform": "mamachi_web",
-            "generated_caption": generated_asset["caption"],
-            "short_url": generated_asset["short_url"],
-            "video_path": generated_asset.get("video_url")
-        }).execute()
-        logger.info("Published to Mamachi Web Feed for product: %s", campaign['product_title'])
-    except Exception as e:
-        logger.error("Failed to log web publication: %s", e)
-
-    logger.info("Dispatched to Mamachi Official TikTok, Instagram, and YouTube channels")
-    if campaign.get("customer_social_tokens"):
-        logger.info("Cross-posted to customer's connected social channels")
-
-# -----------------------------------------------------------------------------
-# Main Campaign Runner
-# -----------------------------------------------------------------------------
-def run_campaign() -> bool:
-    if DRY_RUN:
-        logger.info("=== DRY-RUN MODE: no real posts or DB writes ===")
-
-    product, tried = None, set()
-    for _ in range(5):
-        cand = pick_product(exclude=tried)
-        if not cand:
-            break
-        if url_is_alive(cand.get("destination_url") or ""):
-            product = cand
-            break
-        logger.error("Destination does not respond, skipping product '%s': %s",
-                     cand.get("product_title"), cand.get("destination_url"))
-        tried.add(cand.get("product_id"))
-
-    if not product:
-        logger.error("No active compliant product available under current hourly/daily caps")
-        send_alert("No active compliant product available under current hourly/daily caps")
-        return False
-
-    title = product.get("product_title")
-    destination_url = product.get("destination_url")
-    manuscript = product.get("manuscript_text") or ""
-    product_id = product.get("product_id")
+def generate_web_post(product: dict) -> str:
+    title = product.get("product_title", "Mamachi Featured Promotion")
+    body = product.get("manuscript_text", "Discover how Mamachi automates round-the-clock organic promotion for authors and digital creators.")
+    link = product.get("destination_url", "https://mamachiad.github.io/mamachi-ad-engine/advertise.html")
+    category = product.get("service_category", "book_publication")
     
-    logger.info("Processing product: %s", title)
+    now = datetime.utcnow()
+    date_str = now.strftime("%b %d, %Y")
+    timestamp = now.strftime("%Y%m%d-%H%M%S")
+    filename = f"{timestamp}.html"
+    
+    docs_dir = Path("docs")
+    posts_dir = docs_dir / "posts"
+    posts_dir.mkdir(parents=True, exist_ok=True)
+    
+    filepath = posts_dir / filename
+    
+    hero_img = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80"
+    video_cover = "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1600&q=80"
 
-    short_data = shorten_link(destination_url)
-    short_link = short_data["short_url"]
+    html_content = f"""<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} - {BRAND_NAME} Intelligence Feed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .glass-panel {{ background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }}
+        .gradient-text {{ background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
 
-    snippet = manuscript[:500] if manuscript else title
-    promo_text = generate_promo(title, snippet, targeting=product)
-    body = clean_text(strip_link(promo_text, short_link))
-    logger.info("Post text: %s | link: %s", body, short_link)
+    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="../index.html" class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg">M</div>
+                <span class="font-extrabold text-xl tracking-tight text-white">{BRAND_NAME}<span class="text-sky-500">.</span></span>
+            </a>
+            <a href="../advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-sky-500/25">
+                ⚡ Create Campaign
+            </a>
+        </div>
+    </header>
 
-    tags = product.get("hashtags")
-    style = product.get("image_style") or ""
-    tag_list = [t.lstrip("#") for t in (tags.replace(",", " ").split() if isinstance(tags, str) else (tags or []))]
+    <main class="max-w-4xl mx-auto px-4 py-10 space-y-10">
+        <a href="../index.html" class="inline-flex items-center gap-2 text-xs font-bold text-sky-400 hover:underline">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Intelligence Feed
+        </a>
 
-    video_path, video_url = None, None
-    try:
-        video_path = generate_short_video(title, snippet, short_link, script=body, style=style, tags=tags)
-        if video_path and platforms.is_active("instagram") and not DRY_RUN:
-            video_url = upload_public_video(video_path)
-    except Exception as e:
-        logger.exception("Multi-media generation failed: %s", e)
+        <div class="space-y-4 text-center">
+            <span class="px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
+                {category.replace('_', ' ').title()}
+            </span>
+            <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">{title}</h1>
+            <p class="text-xs text-slate-400">{date_str} &bull; Verified AI Campaign</p>
+        </div>
 
-    post = Post(title=title, body=body, link=short_link, tags=tag_list,
-                video_path=video_path, video_url=video_url, product_id=product_id)
+        <div class="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-800 aspect-video">
+            <img src="{hero_img}" alt="{title}" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+            <div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">Active Promotion</span>
+                <a href="{link}" target="_blank" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-2xl">
+                    ⚡ GET IT HERE
+                </a>
+            </div>
+        </div>
 
-    statuses = platforms.publish_all(post)
-    manual = {}
-    if video_path:
-        full = f"{body}\n\n{short_link}"
-        if prepare_tiktok_package(video_path, title, full, short_link, tags=tags):
-            manual["tiktok"] = ("manual", "package ready in generated_media/")
-        if statuses.get("instagram", ("",))[0] in ("pending", "failed", "skipped"):
-            if prepare_instagram_package(video_path, title, full, short_link, tags=tags):
-                manual["instagram (manual)"] = ("manual", "package ready in generated_media/")
+        <div class="p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
+            <h2 class="text-xl font-bold text-white border-b border-slate-800 pb-3">Campaign Overview</h2>
+            <p class="text-slate-300 text-base sm:text-lg leading-relaxed">{body}</p>
+            <div class="pt-4 border-t border-slate-800 flex justify-between items-center">
+                <span class="text-xs text-slate-400">Official Secure Link:</span>
+                <a href="{link}" target="_blank" class="px-6 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs uppercase">
+                    Visit Destination ↗
+                </a>
+            </div>
+        </div>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
+"""
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(html_content)
+        
+    return filename, title, body, link
 
-    web_url = None if DRY_RUN else publish_web(title, body, short_link, tag_list, product_id,
-                                                brand=os.environ.get("BRAND_NAME", "Mamachi"))
-    manual["web"] = ("posted", f"files written to docs/; live at {web_url} once Pages deploys") if web_url else (("dry-run", "") if DRY_RUN else ("failed", "see log"))
-    platforms.write_summary(statuses, manual)
+def update_main_feed(posts: list):
+    docs_dir = Path("docs")
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    
+    cards_html = ""
+    for p in posts:
+        cards_html += f"""
+        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
+            <div>
+                <div class="relative aspect-video overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
+                    <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
+                        Verified Campaign
+                    </div>
+                </div>
+                <div class="p-6 space-y-3">
+                    <span class="text-xs font-semibold text-sky-400">Active Intelligence Feed</span>
+                    <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
+                        {p['title']}
+                    </h3>
+                    <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
+                        {p['body']}
+                    </p>
+                </div>
+            </div>
+            <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
+                <a href="posts/{p['filename']}" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
+                    Read Full Story <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
+                <a href="{p['link']}" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
+                    GET IT HERE
+                </a>
+            </div>
+        </div>
+        """
 
-    posted = [n for n, s in {**statuses, **manual}.items() if s[0] == "posted"]
-    if DRY_RUN:
-        logger.info("[DRY-RUN] Skipping campaign log")
-        return True
-    if not posted:
-        logger.error("Nothing was published.")
-        return False
+    index_html = f"""<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{BRAND_NAME} Intelligence Feed & Automated Ads</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .glass-panel {{ background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }}
+        .gradient-text {{ background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
 
-    try:
-        asset_payload = {
-            "caption": body,
-            "short_url": short_link,
-            "video_url": video_url
-        }
-        asyncio.run(publish_omnichannel_campaign(product, asset_payload))
-    except Exception as e:
-        logger.warning("Omnichannel publishing notice: %s", e)
+    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg">M</div>
+                <span class="font-extrabold text-xl tracking-tight text-white">{BRAND_NAME}<span class="text-sky-500">.</span></span>
+            </a>
+            <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg">
+                ⚡ Launch Ad Campaign
+            </a>
+        </div>
+    </header>
 
-    log_entry = {
-        "product_id": product_id,
-        "platform": ",".join(posted),
-        "generated_caption": body,
-        "short_url": short_link,
-        "shortio_id": short_data.get("shortio_id"),
-        "video_path": video_path,
-        "clicks_count": 0,
-    }
-    try:
-        supabase.table("mamachi_campaign_logs").insert(log_entry).execute()
-        logger.info("Campaign logged successfully")
-    except Exception as e:
-        logger.error("Failed to log campaign: %s", e)
-    return True
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        <section class="max-w-4xl mx-auto text-center space-y-6">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Mamachi Intelligence Feed
+            </div>
+            <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
+                Discover Verified Offers & <span class="gradient-text">Omnichannel Campaigns</span>
+            </h1>
+            <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
+                Explore active promotions, viral reports, and automated campaigns published 24/7 across our global publishing network.
+            </p>
+        </section>
 
-# -----------------------------------------------------------------------------
-# Script Entrypoint
-# -----------------------------------------------------------------------------
+        <section class="max-w-6xl mx-auto space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="flame" class="w-5 h-5 text-amber-400"></i> Active Feed Releases
+                </h2>
+                <a href="advertise.html" class="text-xs font-bold text-sky-400 hover:underline">Promote Your Product →</a>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {cards_html}
+            </div>
+        </section>
+    </main>
+
+    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
+        <p>&copy; 2026 {BRAND_NAME} Automated Advertising Engine. All rights reserved.</p>
+    </footer>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
+"""
+    
+    with open(docs_dir / "index.html", "w", encoding="utf-8") as f:
+        f.write(index_html)
+        
+    with open(docs_dir / "posts.json", "w", encoding="utf-8") as f:
+        json.dump([{"id": p["filename"].replace(".html", ""), "title": p["title"]} for p in posts], f, indent=2)
+
+def main():
+    print("🚀 Starting Mamachi Ad Engine...")
+    supabase = get_supabase_client()
+    
+    products = []
+    if supabase:
+        try:
+            res = supabase.table("mamachi_products").select("*").eq("is_active", True).execute()
+            products = res.data
+        except Exception as e:
+            print(f"⚠️ Error fetching from Supabase: {e}")
+            
+    if not products:
+        print("ℹ️ No active products found in Supabase. Using default featured campaign.")
+        products = [{
+            "product_title": "Mamachi AD Engine Launch",
+            "manuscript_text": "Discover how the Mamachi AD Engine automates round-the-clock organic promotion for authors and digital creators.",
+            "destination_url": "https://mamachiad.github.io/mamachi-ad-engine/advertise.html",
+            "service_category": "book_publication"
+        }]
+        
+    published_posts = []
+    for p in products:
+        filename, title, body, link = generate_web_post(p)
+        published_posts.append({
+            "filename": filename,
+            "title": title,
+            "body": body,
+            "link": link
+        })
+        print(f"✅ Published web post: {title}")
+        
+    update_main_feed(published_posts)
+    print("✨ Intelligence Feed updated successfully in docs/")
+
 if __name__ == "__main__":
-    try:
-        ok = run_campaign()
-    except Exception as e:
-        logger.exception("Campaign crashed: %s", e)
-        send_alert(f"Campaign crashed: {e}")
-        raise
-    sys.exit(0 if ok else 1)
+    main()
