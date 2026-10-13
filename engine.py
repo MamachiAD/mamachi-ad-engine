@@ -1,9 +1,3 @@
-from video_engine import (
-    generate_short_video,
-    post_to_youtube_shorts,
-    prepare_tiktok_package,
-    prepare_instagram_package,
-)
 import os
 import time
 import logging
@@ -12,6 +6,13 @@ from typing import Optional, Any, Dict, List
 import requests
 from google import genai
 from supabase import Client, create_client
+
+from video_engine import (
+    generate_short_video,
+    post_to_youtube_shorts,
+    prepare_tiktok_package,
+    prepare_instagram_package,
+)
 
 # -----------------------------------------------------------------------------
 # Logging
@@ -229,11 +230,10 @@ def generate_promo(title: str, snippet: str, short_link: str) -> str:
     )
 
     logger.info("Generating promo with Gemini (multi-model fallback enabled)...")
-
     last_error: Optional[Exception] = None
 
     for model in GEMINI_MODELS:
-        for attempt in range(1, 4):  # 3 attempts per model
+        for attempt in range(1, 4):
             try:
                 response = ai_client.models.generate_content(
                     model=model,
@@ -246,14 +246,13 @@ def generate_promo(title: str, snippet: str, short_link: str) -> str:
                 raise ValueError("Empty response from Gemini")
             except Exception as e:
                 last_error = e
-                wait = min(2 ** attempt * 3, 30)  # 6s → 12s → 24s (capped)
+                wait = min(2 ** attempt * 3, 30)
                 logger.warning(
                     "Model %s attempt %d failed: %s → retry in %ds",
                     model, attempt, e, wait,
                 )
                 time.sleep(wait)
 
-    # Final safety net – never let the campaign crash
     logger.error(
         "All Gemini models failed after retries. Using static fallback. Last error: %s",
         last_error,
@@ -263,7 +262,6 @@ def generate_promo(title: str, snippet: str, short_link: str) -> str:
         {"last_error": str(last_error)},
     )
 
-    # Clean static fallback that still includes the link
     return (
         f"Discover how Super-Intelligence is rewriting the rules of wealth in "
         f"'{title}'. Position yourself ahead of the curve before everyone else. "
@@ -315,7 +313,7 @@ def run_campaign() -> None:
     promo_text = generate_promo(title, snippet, short_link)
     logger.info("Generated copy:\n%s", promo_text)
 
-    # 4. Post to social platforms (all optional)
+    # 4. Post to text social platforms (all optional)
     results = {
         "facebook": post_to_facebook(promo_text, short_link),
         "linkedin": post_to_linkedin(promo_text, short_link),
@@ -326,9 +324,27 @@ def run_campaign() -> None:
     if posted:
         logger.info("Posted to: %s", ", ".join(posted))
     else:
-        logger.info("No social platforms configured or all skipped — continuing with logging only")
+        logger.info("No text social platforms configured or all skipped")
 
-    # 5. Log to Supabase (skip in dry-run)
+    # 5. Free multi-media (images + video + packages)
+    video_path = None
+    try:
+        video_path = generate_short_video(title, snippet, short_link)
+        if video_path:
+            logger.info("Free short video ready: %s", video_path)
+
+            # Free YouTube Shorts (auto)
+            post_to_youtube_shorts(video_path, title, promo_text)
+
+            # Free TikTok ready package
+            prepare_tiktok_package(video_path, title, promo_text, short_link)
+
+            # Free Instagram Reels ready package
+            prepare_instagram_package(video_path, title, promo_text, short_link)
+    except Exception as e:
+        logger.warning("Multi-media generation skipped: %s", e)
+
+    # 6. Log to Supabase (skip in dry-run)
     if DRY_RUN:
         logger.info("[DRY-RUN] Skipping campaign log")
         return
@@ -339,6 +355,7 @@ def run_campaign() -> None:
         "generated_caption": promo_text,
         "short_url": short_link,
         "shortio_id": short_data.get("shortio_id"),
+        "video_path": video_path,
         "clicks_count": 0,
     }
 
