@@ -330,15 +330,18 @@ def run_campaign() -> bool:
     logger.info("Text platforms posted: %s", ", ".join(posted) if posted else "none")
 
     video_path, youtube_ok = None, False
+    tags = product.get("hashtags")            # optional column: "#a #b" or a list
+    style = product.get("image_style") or ""  # optional column: how the images should look
     try:
-        video_path = generate_short_video(title, snippet, short_link)
+        video_path = generate_short_video(title, snippet, short_link, script=body, style=style, tags=tags)
         if video_path:
             logger.info("Short video ready: %s", video_path)
-            youtube_ok = bool(post_to_youtube_shorts(video_path, title, f"{body}\n\n{short_link}"))
+            full = f"{body}\n\n{short_link}"
+            youtube_ok = bool(post_to_youtube_shorts(video_path, title, full, tags=tags))
             if youtube_ok:
                 posted.append("youtube")
-            prepare_tiktok_package(video_path, title, f"{body}\n\n{short_link}", short_link)
-            prepare_instagram_package(video_path, title, f"{body}\n\n{short_link}", short_link)
+            prepare_tiktok_package(video_path, title, full, short_link, tags=tags)
+            prepare_instagram_package(video_path, title, full, short_link, tags=tags)
         else:
             logger.warning("No video was produced")
     except Exception as e:
