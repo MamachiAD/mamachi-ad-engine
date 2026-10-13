@@ -1,387 +1,306 @@
 import os
-import json
+import sys
+import time
 import random
-from datetime import datetime
+import logging
+from typing import Optional, Any, Dict, List
+
+import requests
+from google import genai
+from google.genai import types
+from supabase import Client, create_client
+
 from pathlib import Path
-from supabase import create_client, Client
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-BRAND_NAME = os.environ.get("BRAND_NAME", "Mamachi")
+import platforms
+from platforms import Post
+from web_publish import publish_web
+from video_engine import (
+    generate_short_video,
+    prepare_tiktok_package,
+    prepare_instagram_package,
+)
 
-# Dynamic Creative Angle Pool for Fresh Posts on Every Run
-MARKETING_ANGLES = [
-    {"angle": "Problem-Solution", "hook_prefix": "Are you ready to unlock the future of AI wealth?"},
-    {"angle": "Viral Storyteller", "hook_prefix": "This single shift in super-intelligence is redefining modern wealth creation..."},
-    {"angle": "Curiosity & FOMO", "hook_prefix": "Why early adopters are positioning themselves for super-intelligence right now."},
-    {"angle": "Expert Analysis", "hook_prefix": "A practical breakdown on navigating the super-intelligence economy."}
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# Environment helpers
+# -----------------------------------------------------------------------------
+def _get_env(key: str, required: bool = False) -> str:
+    value = os.environ.get(key, "").strip().strip('"\'')
+    if required and not value:
+        raise RuntimeError(f"Missing required environment variable: {key}")
+    return value
+
+
+SUPABASE_URL = _get_env("SUPABASE_URL", required=True)
+# IMPORTANT: use the *service_role* key here (GitHub secret only, never in a web page).
+# The anon key is blocked by row-level security when inserting campaign logs.
+SUPABASE_KEY = _get_env("SUPABASE_KEY", required=True)
+SHORTIO_API_KEY = _get_env("SHORTIO_API_KEY", required=True)
+GEMINI_API_KEY = _get_env("GEMINI_API_KEY", required=True)
+
+SHORTIO_DOMAIN = _get_env("SHORTIO_DOMAIN") or "mamachi-engine.s.gy"
+DRY_RUN = _get_env("DRY_RUN").lower() in ("1", "true", "yes")
+ALERT_WEBHOOK_URL = _get_env("ALERT_WEBHOOK_URL")
+
+GEMINI_MODELS: List[str] = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
 ]
+GEMINI_TIMEOUT_MS = 60_000      # one request may take at most 60 s
+GEMINI_TOTAL_BUDGET_S = 120     # give up on text generation after 2 minutes
 
-VISUAL_STYLES = [
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80",
-    "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1600&q=80",
-    "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1600&q=80"
-]
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+ai_client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS))
 
-VOICE_TONES = ["High-Energy Launch", "Conversational Story", "Authoritative Briefing"]
 
-def get_supabase_client() -> Client:
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("⚠️ Supabase credentials missing. Running in dry mode.")
+# -----------------------------------------------------------------------------
+# Text helpers
+# -----------------------------------------------------------------------------
+def clean_text(text: str) -> str:
+    """Remove Markdown marks that social sites would show literally."""
+    return " ".join(text.replace("*", "").replace("`", "").split()) if "\n" not in text else \
+        "\n".join(" ".join(line.replace("*", "").replace("`", "").split()) for line in text.splitlines()).strip()
+
+
+def strip_link(text: str, link: str) -> str:
+    return text.replace(link, "").strip()
+
+
+# -----------------------------------------------------------------------------
+# Alert helper
+# -----------------------------------------------------------------------------
+def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
+    if not ALERT_WEBHOOK_URL:
+        return
+    payload = {"text": f"🚨 Mamachi Campaign: {message}", "extra": extra or {}}
+    try:
+        requests.post(ALERT_WEBHOOK_URL, json=payload, timeout=8)
+    except Exception as e:
+        logger.warning("Failed to send alert: %s", e)
+
+
+# -----------------------------------------------------------------------------
+# Short.io (allowDuplicates=False reuses the existing short link for the same URL)
+# -----------------------------------------------------------------------------
+def shorten_link(original_url: str) -> Dict[str, Any]:
+    result = {"short_url": original_url, "shortio_id": None, "raw": None}
+    if not SHORTIO_API_KEY:
+        logger.warning("SHORTIO_API_KEY missing — using original URL")
+        return result
+    try:
+        response = requests.post(
+            "https://api.short.io/links",
+            json={"originalURL": original_url, "domain": SHORTIO_DOMAIN, "allowDuplicates": False},
+            headers={"Authorization": SHORTIO_API_KEY, "Content-Type": "application/json", "Accept": "application/json"},
+            timeout=10,
+        )
+        if response.status_code in (200, 201):
+            data = response.json()
+            short = data.get("secureShortURL") or data.get("shortURL")
+            if short:
+                result.update(short_url=short, shortio_id=data.get("idString") or data.get("id"), raw=data)
+                logger.info("Short link ready: %s", short)
+                return result
+        logger.warning("Short.io failed (%s): %s", response.status_code, response.text)
+    except Exception as e:
+        logger.warning("Short.io exception: %s", e)
+    return result
+
+
+# -----------------------------------------------------------------------------
+# Gemini: fast-fail on bad models, overall time budget, calm static fallback
+# -----------------------------------------------------------------------------
+def generate_promo(title: str, snippet: str, short_link: str) -> str:
+    prompt = (
+        f"Write a promotional post (2 sentences, under 230 characters, plain text, no Markdown, no asterisks) "
+        f"for the book titled '{title}'.\n"
+        f"Use this manuscript snippet for inspiration:\n{snippet}\n\n"
+        "Rules: be specific and honest. Do not promise results, income or returns. "
+        "Do not use urgency or fear-of-missing-out phrases. Do not include a link or hashtags.\n"
+    )
+    logger.info("Generating promo with Gemini...")
+    started, last_error = time.time(), None
+
+    for model in GEMINI_MODELS:
+        for attempt in range(1, 4):
+            if time.time() - started > GEMINI_TOTAL_BUDGET_S:
+                logger.error("Gemini time budget used up")
+                break
+            try:
+                response = ai_client.models.generate_content(model=model, contents=prompt)
+                text = clean_text((response.text or "").strip())
+                if text:
+                    logger.info("Promo generated with model %s in %.0fs", model, time.time() - started)
+                    return text
+                raise ValueError("Empty response from Gemini")
+            except Exception as e:
+                last_error = e
+                code = getattr(e, "code", None)
+                logger.warning("Model %s attempt %d failed: %s", model, attempt, e)
+                if code in (400, 401, 403, 404):   # retrying will not help, try the next model
+                    break
+                time.sleep(min(2 ** attempt * 3, 20))
+
+    logger.error("All Gemini models failed. Using static fallback. Last error: %s", last_error)
+    send_alert("Gemini unavailable, used static fallback promo", {"last_error": str(last_error)})
+    return f"New from Mamachi: '{title}'. Take a look at what's inside."
+
+
+# -----------------------------------------------------------------------------
+# Product rotation: promote the product that was promoted longest ago
+# -----------------------------------------------------------------------------
+def pick_product() -> Optional[Dict[str, Any]]:
+    rows = supabase.table("mamachi_products").select("*").eq("is_active", True).execute().data or []
+    if not rows:
         return None
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        logs = (
+            supabase.table("mamachi_campaign_logs")
+            .select("product_id,created_at")
+            .order("created_at", desc=True)
+            .limit(500)
+            .execute()
+            .data
+            or []
+        )
+    except Exception as e:
+        logger.warning("Rotation history unavailable (%s). Choosing at random.", e)
+        return random.choice(rows)
+    last: Dict[Any, str] = {}
+    for r in logs:
+        last.setdefault(r.get("product_id"), r.get("created_at") or "")
+    never = [p for p in rows if p.get("product_id") not in last]
+    if never:
+        return random.choice(never)
+    return min(rows, key=lambda p: last[p.get("product_id")])
 
-def generate_web_post(product: dict, run_count: int = 1) -> tuple:
-    title = product.get("product_title", "Mamachi Featured Promotion")
-    base_body = product.get("manuscript_text", "Discover how Mamachi automates round-the-clock organic promotion.")
-    link = product.get("destination_url", "https://mamachiad.github.io/mamachi-ad-engine/advertise.html")
-    category = product.get("service_category", "book_publication")
-    
-    # Select dynamic creative elements for this run
-    angle_obj = random.choice(MARKETING_ANGLES)
-    hero_img = random.choice(VISUAL_STYLES)
-    voice_tone = random.choice(VOICE_TONES)
-    dynamic_body = f"{angle_obj['hook_prefix']} {base_body}"
 
-    now = datetime.utcnow()
-    date_str = now.strftime("%b %d, %Y")
-    timestamp = now.strftime("%Y%m%d-%H%M%S")
-    filename = f"{timestamp}.html"
-    
-    docs_dir = Path("docs")
-    posts_dir = docs_dir / "posts"
-    posts_dir.mkdir(parents=True, exist_ok=True)
-    filepath = posts_dir / filename
+# -----------------------------------------------------------------------------
+# Public video URL (Instagram needs one). Uses a PUBLIC Supabase Storage bucket.
+# -----------------------------------------------------------------------------
+def upload_public_video(path: str) -> Optional[str]:
+    bucket = os.environ.get("SUPABASE_VIDEO_BUCKET", "promo-videos")
+    name = Path(path).name
+    try:
+        with open(path, "rb") as f:
+            supabase.storage.from_(bucket).upload(name, f.read(), {"content-type": "video/mp4", "upsert": "true"})
+        url = supabase.storage.from_(bucket).get_public_url(name)
+        return url if isinstance(url, str) else (url.get("publicUrl") or url.get("publicURL"))
+    except Exception as e:
+        logger.warning("Public video upload failed (is the bucket '%s' created and public?): %s", bucket, e)
+        return None
 
-    html_content = f"""<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - {BRAND_NAME} Creative Release #{run_count}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {{
-            darkMode: 'class',
-            theme: {{ extend: {{ colors: {{ brand: {{ 500: '#0ea5e9' }} }} }} }}
-        }}
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>.glass-panel {{ background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }}</style>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
 
-    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <a href="../index.html" class="flex items-center gap-2">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl">M</div>
-                <span class="font-extrabold text-xl text-white">{BRAND_NAME}<span class="text-sky-500">.</span></span>
-            </a>
-            <a href="../advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase">⚡ Launch Ad</a>
-        </div>
-    </header>
+# -----------------------------------------------------------------------------
+# Main campaign. Returns True only if something was really published.
+# -----------------------------------------------------------------------------
+def run_campaign() -> bool:
+    if DRY_RUN:
+        logger.info("=== DRY-RUN MODE: no real posts or DB writes ===")
 
-    <main class="max-w-4xl mx-auto px-4 py-10 space-y-10">
-        <a href="../index.html" class="inline-flex items-center gap-2 text-xs font-bold text-sky-400 hover:underline">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Intelligence Feed
-        </a>
+    product = pick_product()
+    if not product:
+        logger.error("No active products found")
+        send_alert("No active products found")
+        return False
 
-        <div class="space-y-4 text-center">
-            <span class="px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
-                Angle: {angle_obj['angle']} &bull; Tone: {voice_tone}
-            </span>
-            <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">{title}</h1>
-            <p class="text-xs text-slate-400">{date_str} &bull; Creative Variant #{run_count} &bull; Syndicated Globally</p>
-        </div>
+    title = product.get("product_title")
+    destination_url = product.get("destination_url")
+    manuscript = product.get("manuscript_text") or ""
+    product_id = product.get("product_id")
+    if not title or not destination_url:
+        msg = "Product missing product_title or destination_url"
+        logger.error(msg)
+        send_alert(msg, {"product": product})
+        return False
+    logger.info("Processing product: %s", title)
 
-        <div class="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-800 aspect-video">
-            <img src="{hero_img}" alt="{title}" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
-            <div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">Active Omnichannel Promotion</span>
-                <a href="{link}" target="_blank" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-2xl">
-                    ⚡ GET IT HERE
-                </a>
-            </div>
-        </div>
+    short_data = shorten_link(destination_url)
+    short_link = short_data["short_url"]
 
-        <div class="p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
-            <h2 class="text-xl font-bold text-white border-b border-slate-800 pb-3">Campaign Overview</h2>
-            <p class="text-slate-300 text-base sm:text-lg leading-relaxed">{dynamic_body}</p>
-            <div class="pt-4 border-t border-slate-800 flex justify-between items-center">
-                <span class="text-xs text-slate-400">Official Secure Link:</span>
-                <a href="{link}" target="_blank" class="px-6 py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs uppercase">
-                    Visit Destination ↗
-                </a>
-            </div>
-        </div>
+    snippet = manuscript[:500] if manuscript else title
+    promo_text = generate_promo(title, snippet, short_link)
+    body = clean_text(strip_link(promo_text, short_link))
+    logger.info("Post text: %s | link: %s", body, short_link)
 
-        <!-- Restored Omnichannel Social Preview Tabs -->
-        <div class="space-y-6 p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
-            <div class="text-center space-y-2">
-                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest bg-sky-500/10 px-3.5 py-1 rounded-full border border-sky-500/25">Live Subscriber Syndication Network</span>
-                <h3 class="text-xl font-black text-white">Multok, YouTube, IG, TikTok & X Broadcast Feeds</h3>
-                <p class="text-xs text-slate-400">Published instantly across our subscriber network with unique variation formatting.</p>
-            </div>
-            
-            <div class="flex flex-wrap justify-center gap-2 border-b border-slate-800 pb-4">
-                <button onclick="switchTab('youtube')" id="tab-youtube" class="px-4 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="youtube" class="w-4 h-4"></i> YouTube (12.4k Subs)</button>
-                <button onclick="switchTab('instagram')" id="tab-instagram" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="instagram" class="w-4 h-4"></i> Instagram (24.1k Followers)</button>
-                <button onclick="switchTab('tiktok')" id="tab-tiktok" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="video" class="w-4 h-4"></i> TikTok (45.8k Followers)</button>
-                <button onclick="switchTab('facebook')" id="tab-facebook" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="facebook" class="w-4 h-4"></i> Facebook (8.9k Likes)</button>
-                <button onclick="switchTab('twitter')" id="tab-twitter" class="px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5"><i data-lucide="twitter" class="w-4 h-4"></i> X / Twitter (15.2k Followers)</button>
-            </div>
+    tags = product.get("hashtags")             # optional column: "#a #b" or a list
+    style = product.get("image_style") or ""   # optional column: how the images should look
+    tag_list = [t.lstrip("#") for t in (tags.replace(",", " ").split() if isinstance(tags, str) else (tags or []))]
 
-            <!-- YouTube Tab -->
-            <div id="content-youtube" class="platform-content space-y-4">
-                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-                    <span class="text-xs font-bold text-red-400 uppercase">YouTube Shorts / Video Ad (Variant #{run_count})</span>
-                    <p class="text-sm text-white font-medium">{title} — {dynamic_body}</p>
-                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
-                        <span>#AIWealth</span><span>#SuperIntelligence</span><span>#Mamachi</span><span>#{category.replace('_', '')}</span>
-                    </div>
-                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
-                        <span>Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
-                        <span class="text-emerald-400 font-bold">● Broadcasted to 12.4k Subscribers</span>
-                    </div>
-                </div>
-            </div>
+    # Video (only if VIDEO_ENABLED). A public URL is made only when Instagram is configured.
+    video_path, video_url = None, None
+    try:
+        video_path = generate_short_video(title, snippet, short_link, script=body, style=style, tags=tags)
+        if video_path and platforms.is_active("instagram") and not DRY_RUN:
+            video_url = upload_public_video(video_path)
+    except Exception as e:
+        logger.exception("Multi-media generation failed: %s", e)
 
-            <!-- Instagram Tab -->
-            <div id="content-instagram" class="platform-content space-y-4" style="display:none;">
-                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-                    <span class="text-xs font-bold text-pink-400 uppercase">Instagram Reel & Feed Post (Variant #{run_count})</span>
-                    <p class="text-sm text-white font-medium">✨ {title}. {dynamic_body} Link in bio & below!</p>
-                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
-                        <span>#BookTok</span><span>#FutureTech</span><span>#WealthCreation</span><span>#MamachiAds</span>
-                    </div>
-                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
-                        <span>Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
-                        <span class="text-emerald-400 font-bold">● Broadcasted to 24.1k Followers</span>
-                    </div>
-                </div>
-            </div>
+    post = Post(title=title, body=body, link=short_link, tags=tag_list,
+                video_path=video_path, video_url=video_url, product_id=product_id)
 
-            <!-- TikTok Tab -->
-            <div id="content-tiktok" class="platform-content space-y-4" style="display:none;">
-                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-                    <span class="text-xs font-bold text-cyan-400 uppercase">TikTok Viral Ad Brief (Variant #{run_count})</span>
-                    <p class="text-sm text-white font-medium">How {title} is rewriting the rules 📈 {angle_obj['angle']} edition.</p>
-                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
-                        <span>#LearnOnTikTok</span><span>#TechTrends</span><span>#Mamachi</span>
-                    </div>
-                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
-                        <span>Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
-                        <span class="text-emerald-400 font-bold">● Broadcasted to 45.8k Followers</span>
-                    </div>
-                </div>
-            </div>
+    # Every configured platform posts; the rest stay 'pending' until their secrets are added.
+    statuses = platforms.publish_all(post)
+    manual = {}
+    if video_path:
+        full = f"{body}\n\n{short_link}"
+        if prepare_tiktok_package(video_path, title, full, short_link, tags=tags):
+            manual["tiktok"] = ("manual", "package ready in generated_media/")
+        if statuses.get("instagram", ("",))[0] in ("pending", "failed", "skipped"):
+            if prepare_instagram_package(video_path, title, full, short_link, tags=tags):
+                manual["instagram (manual)"] = ("manual", "package ready in generated_media/")
 
-            <!-- Facebook Tab -->
-            <div id="content-facebook" class="platform-content space-y-4" style="display:none;">
-                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-                    <span class="text-xs font-bold text-blue-400 uppercase">Facebook Page Campaign Post (Variant #{run_count})</span>
-                    <p class="text-sm text-white font-medium">📢 Featured Release: {title}. {dynamic_body}</p>
-                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
-                        <span>#BusinessGrowth</span><span>#Publishing</span><span>#MamachiEngine</span>
-                    </div>
-                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
-                        <span>Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
-                        <span class="text-emerald-400 font-bold">● Broadcasted to 8.9k Likes</span>
-                    </div>
-                </div>
-            </div>
+    # Web channel: always on, no secrets needed.
+    web_url = None if DRY_RUN else publish_web(title, body, short_link, tag_list, product_id,
+                                               brand=os.environ.get("BRAND_NAME", "Mamachi"))
+    manual["web"] = ("posted", f"files written to docs/; live at {web_url} once Pages deploys") if web_url else (("dry-run", "") if DRY_RUN else ("failed", "see log"))
+    platforms.write_summary(statuses, manual)
 
-            <!-- Twitter/X Tab -->
-            <div id="content-twitter" class="platform-content space-y-4" style="display:none;">
-                <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-                    <span class="text-xs font-bold text-sky-400 uppercase">X / Twitter Post & Thread (Variant #{run_count})</span>
-                    <p class="text-sm text-white font-medium">⚡ {title}. {dynamic_body} Thread 👇</p>
-                    <div class="flex flex-wrap gap-2 text-xs text-sky-400 font-semibold">
-                        <span>#AIgrowth</span><span>#IndieHacker</span><span>#Mamachi</span>
-                    </div>
-                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
-                        <span>Link: <a href="{link}" target="_blank" class="text-sky-400 hover:underline">{link}</a></span>
-                        <span class="text-emerald-400 font-bold">● Broadcasted to 15.2k Followers</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
+    posted = [n for n, s in {**statuses, **manual}.items() if s[0] == "posted"]
+    if DRY_RUN:
+        logger.info("[DRY-RUN] Skipping campaign log")
+        return True
+    if not posted:
+        logger.error("Nothing was published. Check the platform status table above.")
+        send_alert("Run finished but nothing was published", {"product": title})
+        return False
 
-    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
-        <p>&copy; 2026 {BRAND_NAME} Automated Advertising Engine. All rights reserved.</p>
-    </footer>
+    log_entry = {
+        "product_id": product_id,
+        "platform": ",".join(posted),
+        "generated_caption": body,
+        "short_url": short_link,
+        "shortio_id": short_data.get("shortio_id"),
+        "video_path": video_path,
+        "clicks_count": 0,
+    }
+    try:
+        supabase.table("mamachi_campaign_logs").insert(log_entry).execute()
+        logger.info("Campaign logged successfully")
+    except Exception as e:
+        hint = " (row-level security: use the service_role key in SUPABASE_KEY)" if "42501" in str(e) else ""
+        logger.error("Failed to log campaign: %s%s", e, hint)
+        send_alert("Failed to insert campaign log" + hint, {"error": str(e)})
+    return True
 
-    <script>
-        lucide.createIcons();
-        function switchTab(platform) {{
-            ['youtube', 'instagram', 'tiktok', 'facebook', 'twitter'].forEach(p => {{
-                const content = document.getElementById('content-' + p);
-                const tab = document.getElementById('tab-' + p);
-                if (content && tab) {{
-                    content.style.display = (p === platform) ? 'block' : 'none';
-                    tab.className = (p === platform) ? 
-                        'px-4 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5' : 
-                        'px-4 py-2 rounded-xl bg-slate-950 text-slate-400 hover:text-white font-bold text-xs uppercase transition-all flex items-center gap-1.5';
-                }}
-            }});
-        }}
-    </script>
-</body>
-</html>
-"""
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(html_content)
-        
-    return filename, title, dynamic_body, link
-
-def update_main_feed(posts: list):
-    docs_dir = Path("docs")
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    
-    cards_html = ""
-    for p in posts:
-        cards_html += f"""
-        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
-            <div>
-                <div class="relative aspect-video overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
-                    <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Omnichannel Active
-                    </div>
-                </div>
-                <div class="p-6 space-y-3">
-                    <span class="text-xs font-semibold text-sky-400">Mamachi Intelligence Feed</span>
-                    <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
-                        {p['title']}
-                    </h3>
-                    <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                        {p['body']}
-                    </p>
-                </div>
-            </div>
-            <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
-                <a href="posts/{p['filename']}" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
-                    View Live Syndication <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                </a>
-                <a href="{p['link']}" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
-                    GET IT HERE
-                </a>
-            </div>
-        </div>
-        """
-
-    index_html = f"""<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{BRAND_NAME} Intelligence Feed & Automated Ads</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {{
-            darkMode: 'class',
-            theme: {{
-                extend: {{
-                    colors: {{ brand: {{ 500: '#0ea5e9', 600: '#0284c7' }} }},
-                    fontFamily: {{ sans: ['Inter', 'sans-serif'] }}
-                }}
-            }}
-        }}
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        .glass-panel {{ background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }}
-        .gradient-text {{ background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-    </style>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
-
-    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <a href="index.html" class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg">M</div>
-                <span class="font-extrabold text-xl tracking-tight text-white">{BRAND_NAME}<span class="text-sky-500">.</span></span>
-            </a>
-            <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg">
-                ⚡ Launch Ad Campaign
-            </a>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-        <section class="max-w-4xl mx-auto text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Mamachi Intelligence Feed
-            </div>
-            <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
-                Discover Verified Offers & <span class="gradient-text">Omnichannel Campaigns</span>
-            </h1>
-            <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
-                Explore active promotions, viral reports, and automated campaigns published 24/7 across our global publishing network.
-            </p>
-        </section>
-
-        <section class="max-w-6xl mx-auto space-y-6">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
-                    <i data-lucide="flame" class="w-5 h-5 text-amber-400"></i> Active Feed Releases
-                </h2>
-                <a href="advertise.html" class="text-xs font-bold text-sky-400 hover:underline">Promote Your Product →</a>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {cards_html}
-            </div>
-        </section>
-    </main>
-
-    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
-        <p>&copy; 2026 {BRAND_NAME} Automated Advertising Engine. All rights reserved.</p>
-    </footer>
-    <script>lucide.createIcons();</script>
-</body>
-</html>
-"""
-    with open(docs_dir / "index.html", "w", encoding="utf-8") as f:
-        f.write(index_html)
-
-def main():
-    print("🚀 Starting Mamachi Dynamic Ad Engine...")
-    supabase = get_supabase_client()
-    products = []
-    
-    if supabase:
-        try:
-            res = supabase.table("mamachi_products").select("*").eq("is_active", True).execute()
-            products = res.data
-        except Exception as e:
-            print(f"⚠️ Error: {e}")
-            
-    if not products:
-        products = [{
-            "product_title": "SI, Super Intelligence Super Wealth",
-            "manuscript_text": "How Super-Intelligence (SI), Will Rewrite the Rules of Wealth and How to Position Yourself before Everyone Else.",
-            "destination_url": "https://mamachiad.github.io/mamachi-ad-engine/advertise.html",
-            "service_category": "book_publication"
-        }]
-        
-    published_posts = []
-    for idx, p in enumerate(products, start=1):
-        filename, title, body, link = generate_web_post(p, run_count=idx)
-        published_posts.append({
-            "filename": filename,
-            "title": title,
-            "body": body,
-            "link": link
-        })
-        print(f"✅ Generated Dynamic Variant #{idx} with Social Tabs for: {title}")
-        
-    update_main_feed(published_posts)
-    print("✨ Feed and social syndication tabs updated successfully!")
 
 if __name__ == "__main__":
-    main()
+    try:
+        ok = run_campaign()
+    except Exception as e:
+        logger.exception("Campaign crashed: %s", e)
+        send_alert(f"Campaign crashed: {e}")
+        raise
+    sys.exit(0 if ok else 1)

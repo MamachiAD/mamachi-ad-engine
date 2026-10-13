@@ -1,249 +1,90 @@
-import os
-import re
-from datetime import datetime
-from pathlib import Path
-
-def slugify(text: str) -> str:
-    text = text.lower()
-    text = re.sub(r'[^a-z0-9\s-]', '', text)
-    return re.sub(r'[\s-]+', '-', text).strip('-')[:50]
-
-def publish_web(title: str, body: str, link: str, tags: list, product_id: str = "", brand: str = "Mamachi", video_url: str = None) -> str:
-    now = datetime.utcnow()
-    date_str = now.strftime("%b %d, %Y")
-    timestamp = now.strftime("%Y%m%d-%H%M%S")
-    filename = f"{timestamp}.html"
-    
-    docs_dir = Path("docs")
-    posts_dir = docs_dir / "posts"
-    posts_dir.mkdir(parents=True, exist_ok=True)
-    
-    filepath = posts_dir / filename
-    
-    # Premium dynamic cover image
-    hero_img = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80"
-    video_cover = "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1600&q=80"
-
-    html_content = f"""<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - {brand} Ad Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {{
-            darkMode: 'class',
-            theme: {{
-                extend: {{
-                    colors: {{
-                        brand: {{ 500: '#0ea5e9', 600: '#0284c7' }},
-                        tiktok: '#ff0050', instagram: '#e1306c', youtube: '#ff0000', twitter: '#1da1f2', linkedin: '#0a66c2'
-                    }}
-                }}
-            }}
-        }}
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        .glass-panel {{ background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(16px); }}
-        .gradient-text {{ background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-        .phone-shadow {{ box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); }}
-    </style>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
-
-    <!-- Progress Bar -->
-    <div id="scroll-progress" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-sky-500 via-indigo-500 to-pink-500 z-50 transition-all duration-150 w-0"></div>
-
-    <!-- Header -->
-    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <a href="../index.html" class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/30">
-                    M
-                </div>
-                <div class="flex flex-col">
-                    <span class="font-extrabold text-xl tracking-tight text-white leading-none">{brand}<span class="text-sky-500">.</span></span>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ad Engine & Publishing</span>
-                </div>
-            </a>
-            <div class="flex items-center gap-3">
-                <a href="../advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-sky-500/25 transition-all flex items-center gap-2">
-                    <i data-lucide="zap" class="w-4 h-4"></i> Create Campaign
-                </a>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-5xl mx-auto px-4 py-10 space-y-12">
-        <a href="../index.html" class="inline-flex items-center gap-2 text-xs font-bold text-sky-400 hover:underline">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to All Posts
-        </a>
-
-        <!-- Article Header -->
-        <section class="space-y-6 text-center max-w-4xl mx-auto">
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Featured Release
-            </div>
-
-            <h1 class="text-3xl sm:text-5xl font-black text-white leading-tight">
-                {title}
-            </h1>
-
-            <div class="flex items-center justify-center gap-4 text-xs text-slate-400 py-2 border-y border-slate-800">
-                <span>{brand} Research</span>
-                <span>&bull;</span>
-                <span>{date_str}</span>
-                <span>&bull;</span>
-                <span class="text-emerald-400 font-bold flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Verified Active</span>
-            </div>
-        </section>
-
-        <!-- Featured Cover Image with Action Button -->
-        <section class="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-800 group aspect-video">
-            <img src="{hero_img}" alt="Cover Image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
-            
-            <div class="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                <div class="space-y-1">
-                    <span class="text-xs font-bold text-sky-400 uppercase tracking-widest bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700 backdrop-blur-md">Active Ad Campaign</span>
-                    <h3 class="text-lg sm:text-2xl font-bold text-white">{title}</h3>
-                </div>
-                <a href="{link}" target="_blank" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-sky-500 via-indigo-600 to-pink-500 hover:opacity-90 text-white font-black text-xs uppercase tracking-wider shadow-2xl transition-all flex items-center gap-2 shrink-0">
-                    <i data-lucide="zap" class="w-4 h-4"></i> GET IT HERE
-                </a>
-            </div>
-        </section>
-
-        <!-- Audio Podcast Briefing Player -->
-        <section class="p-6 rounded-3xl bg-slate-900 text-white shadow-xl border border-slate-800 space-y-4">
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="flex items-center gap-4 w-full sm:w-auto">
-                    <button onclick="toggleAudio()" id="audio-play-btn" class="w-14 h-14 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white flex items-center justify-center shadow-lg shadow-sky-500/40 transition-transform active:scale-95 shrink-0">
-                        <i data-lucide="play" id="audio-icon" class="w-7 h-7 fill-current ml-1"></i>
-                    </button>
-                    <div>
-                        <span class="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Audio Edition</span>
-                        <h4 class="font-bold text-base text-slate-100">{title} - Audio Brief</h4>
-                        <p class="text-xs text-slate-400" id="audio-status">Paused &bull; 12:40 duration</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Main Body Content Card -->
-        <section class="p-8 sm:p-10 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
-            <h2 class="text-xl font-bold text-white border-b border-slate-800 pb-3">Campaign Summary</h2>
-            <p class="text-slate-300 text-base sm:text-lg leading-relaxed">{body}</p>
-
-            <div class="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <span class="text-xs font-bold text-slate-400">Direct Official Access Link:</span>
-                <a href="{link}" target="_blank" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white font-black text-xs uppercase tracking-wider text-center shadow-xl transition-all">
-                    ⚡ VISIT OFFICIAL SITE
-                </a>
-            </div>
-        </section>
-
-        <!-- Video Presentation Section -->
-        <section class="space-y-4">
-            <h2 class="text-2xl font-black text-white">Video Presentation</h2>
-            <div class="relative rounded-3xl overflow-hidden shadow-2xl bg-slate-900 aspect-video w-full flex items-center justify-center border border-slate-800 group">
-                <img src="{video_cover}" alt="Video Preview" class="absolute inset-0 w-full h-full object-cover opacity-60">
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent"></div>
-                
-                <div class="relative z-10 text-center p-6 flex flex-col items-center">
-                    <a href="{link}" target="_blank" class="w-20 h-20 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-2xl shadow-red-600/50 hover:scale-110 active:scale-95 transition-all">
-                        <i data-lucide="play" class="w-10 h-10 fill-current ml-1"></i>
-                    </a>
-                    <span class="mt-4 text-xs font-semibold uppercase tracking-widest text-slate-200 bg-slate-900/90 px-4 py-1.5 rounded-full border border-slate-700">
-                        Watch Presentation
-                    </span>
-                </div>
-            </div>
-        </section>
-
-        <!-- Multi-Platform Social Ad Studio Preview -->
-        <section class="space-y-6 pt-6">
-            <div class="text-center space-y-2">
-                <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">Omnichannel Distribution</span>
-                <h2 class="text-2xl sm:text-3xl font-black text-white">How This Ad Converts Across Social Media</h2>
-            </div>
-
-            <div class="flex justify-center gap-2 flex-wrap p-2 rounded-2xl bg-slate-900 border border-slate-800 max-w-xl mx-auto">
-                <button onclick="switchTab('yt')" id="tab-yt" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-white">YouTube</button>
-                <button onclick="switchTab('ig')" id="tab-ig" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-400">Instagram</button>
-                <button onclick="switchTab('tt')" id="tab-tt" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-400">TikTok</button>
-            </div>
-
-            <div class="p-8 rounded-3xl bg-slate-900 border border-slate-800 flex justify-center min-h-[350px] items-center">
-                <div id="view-yt" class="view-panel w-full max-w-3xl space-y-4">
-                    <div class="relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 p-4 flex flex-col justify-end">
-                        <img src="{hero_img}" class="absolute inset-0 w-full h-full object-cover opacity-60">
-                        <div class="relative z-10 bg-slate-900/90 p-4 rounded-xl border border-slate-700 flex items-center justify-between">
-                            <div>
-                                <h4 class="font-bold text-sm text-white">{title}</h4>
-                                <p class="text-xs text-slate-400">Sponsored Ad</p>
-                            </div>
-                            <a href="{link}" target="_blank" class="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase">Visit Site</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="view-ig" class="view-panel hidden w-full max-w-xs">
-                    <div class="relative aspect-[9/16] rounded-[32px] overflow-hidden bg-slate-950 border-4 border-slate-800 p-4 flex flex-col justify-end phone-shadow">
-                        <img src="{video_cover}" class="absolute inset-0 w-full h-full object-cover opacity-80">
-                        <div class="relative z-10 space-y-3">
-                            <p class="text-xs text-white font-medium">{body}</p>
-                            <a href="{link}" target="_blank" class="block text-center py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-xs uppercase">Learn More</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="view-tt" class="view-panel hidden w-full max-w-xs">
-                    <div class="relative aspect-[9/16] rounded-[32px] overflow-hidden bg-slate-950 border-4 border-slate-800 p-4 flex flex-col justify-end phone-shadow">
-                        <img src="{hero_img}" class="absolute inset-0 w-full h-full object-cover opacity-80">
-                        <div class="relative z-10 space-y-3">
-                            <p class="text-xs text-white font-medium">{title}</p>
-                            <a href="{link}" target="_blank" class="block text-center py-2.5 rounded-xl bg-tiktok text-white font-black text-xs uppercase">Get Offer</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
-        <p>&copy; 2026 {brand} Automated Advertising Engine. All rights reserved.</p>
-    </footer>
-
-    <script>
-        lucide.createIcons();
-
-        window.addEventListener('scroll', () => {{
-            const winScroll = document.documentElement.scrollTop;
-            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            document.getElementById('scroll-progress').style.width = (winScroll / height) * 100 + '%';
-        }});
-
-        let isPlaying = false;
-        function toggleAudio() {{
-            isPlaying = !isPlaying;
-            document.getElementById('audio-status').innerText = isPlaying ? "Playing audio brief..." : "Paused • 12:40 duration";
-        }}
-
-        function switchTab(platform) {{
-            document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('bg-slate-800', 'text-white'));
-            document.getElementById('view-' + platform).classList.remove('hidden');
-            document.getElementById('tab-' + platform).classList.add('bg-slate-800', 'text-white');
-        }}
-    </script>
-</body>
-</html>
 """
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(html_content)
-        
-    return f"https://mamachiad.github.io/mamachi-ad-engine/posts/{filename}"
+Web channel: always available, needs no secrets. Builds a static site in docs/ (index, one page per post, RSS feed, sitemap)
+for GitHub Pages (Settings > Pages > Deploy from branch > main > /docs).
+"""
+import os
+import json
+import html
+import logging
+from datetime import datetime, timezone
+from email.utils import format_datetime
+from pathlib import Path
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+E = html.escape
+
+
+def site_url() -> str:
+    url = os.environ.get("SITE_URL", "").strip().rstrip("/")
+    if url:
+        return url
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if "/" in repo:
+        owner, name = repo.split("/", 1)
+        return f"https://{owner.lower()}.github.io/{name}"
+    return ""
+
+
+CSS = ("body{font:17px/1.6 Andika,Arial,sans-serif;background:#FFF6DF;color:#3A1A0A;margin:0}"
+       "header{background:linear-gradient(#4FB3EE,#D3EEFB);padding:28px 20px;text-align:center}"
+       "main{max-width:760px;margin:0 auto;padding:20px}"
+       "article{background:#fff;border:3px solid #3A1A0A;border-radius:16px;padding:16px 20px;margin:16px 0}"
+       "a.btn{display:inline-block;background:#E8661A;color:#fff;padding:10px 20px;border:3px solid #3A1A0A;"
+       "border-radius:24px;text-decoration:none;font-weight:700}small{color:#6b4a35}")
+
+
+def _page(title: str, body: str, desc: str = "", canonical: str = "") -> str:
+    can = f'<link rel="canonical" href="{E(canonical)}">' if canonical else ""
+    return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<title>{E(title)}</title><meta name="description" content="{E(desc[:160])}">'
+            f'<meta property="og:title" content="{E(title)}"><meta property="og:description" content="{E(desc[:200])}">{can}'
+            f'<link rel="alternate" type="application/rss+xml" href="feed.xml"><style>{CSS}</style></head><body>{body}</body></html>')
+
+
+def publish_web(title: str, body: str, link: str, tags: list, product_id=None, brand: str = "Mamachi", out_dir: str = "docs") -> Optional[str]:
+    try:
+        out = Path(out_dir)
+        (out / "posts").mkdir(parents=True, exist_ok=True)
+        db = out / "posts.json"
+        posts = json.loads(db.read_text(encoding="utf-8")) if db.exists() else []
+        now = datetime.now(timezone.utc)
+        pid = now.strftime("%Y%m%d-%H%M%S")
+        posts.insert(0, {"id": pid, "date": now.isoformat(), "title": title, "body": body, "link": link, "tags": tags, "product_id": product_id})
+        posts = posts[:200]
+        db.write_text(json.dumps(posts, ensure_ascii=False, indent=1), encoding="utf-8")
+
+        base = site_url()
+        for p in posts:
+            art = (f'<main><p><a href="../index.html">All posts</a></p><article><h1>{E(p["title"])}</h1><p>{E(p["body"])}</p>'
+                   f'<p><a class="btn" href="{E(p["link"])}" rel="noopener">Get it here</a></p>'
+                   f'<small>{E(p["date"][:10])}</small></article></main>')
+            (out / "posts" / f'{p["id"]}.html').write_text(
+                _page(f'{p["title"]} | {brand}', f"<header><h2>{E(brand)}</h2></header>{art}", p["body"],
+                      f'{base}/posts/{p["id"]}.html' if base else ""), encoding="utf-8")
+
+        cards = "".join(
+            f'<article><h2><a href="posts/{p["id"]}.html">{E(p["title"])}</a></h2><p>{E(p["body"])}</p>'
+            f'<p><a class="btn" href="{E(p["link"])}" rel="noopener">Get it here</a></p><small>{E(p["date"][:10])}</small></article>'
+            for p in posts[:40])
+        (out / "index.html").write_text(_page(f"{brand}: books and more", f"<header><h1>{E(brand)}</h1><p>New picks, tips and stories.</p></header><main>{cards}</main>",
+                                              f"Latest from {brand}", f"{base}/" if base else ""), encoding="utf-8")
+
+        items = "".join(
+            f'<item><title>{E(p["title"])}</title><link>{E(base)}/posts/{p["id"]}.html</link><guid isPermaLink="false">{p["id"]}</guid>'
+            f'<description>{E(p["body"])}</description><pubDate>{format_datetime(datetime.fromisoformat(p["date"]))}</pubDate></item>'
+            for p in posts[:50])
+        (out / "feed.xml").write_text(
+            f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>{E(brand)}</title><link>{E(base)}/</link>'
+            f'<description>Latest from {E(brand)}</description>{items}</channel></rss>', encoding="utf-8")
+        if base:
+            urls = "".join(f"<url><loc>{E(base)}/posts/{p['id']}.html</loc></url>" for p in posts)
+            (out / "sitemap.xml").write_text(
+                f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>{E(base)}/</loc></url>{urls}</urlset>',
+                encoding="utf-8")
+        (out / ".nojekyll").write_text("", encoding="utf-8")
+        logger.info("Web page published to %s/ (live after the workflow commits docs/)", out_dir)
+        return f"{base}/posts/{pid}.html" if base else pid
+    except Exception as e:
+        logger.exception("Web publish failed: %s", e)
+        return None
