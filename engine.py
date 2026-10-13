@@ -125,7 +125,7 @@ def run_campaign():
 
     print("Generating promotional copy with Gemini...")
     promo_text = None
-    for model_name in ["gemini-2.5-flash", "gemini-1.5-flash"]:
+    for model_name in ["gemini-3.8-flash"]:
         try:
             ai_response = ai_client.models.generate_content(model=model_name, contents=prompt)
             promo_text = ai_response.text
