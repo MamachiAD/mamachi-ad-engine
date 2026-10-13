@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advertise With Us | Mamachi Ad Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 900: '#0c4a6e' },
+                        tiktok: '#ff0050', instagram: '#e1306c', youtube: '#ff0000'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); }
+        .dark .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }
+        .gradient-text { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans min-h-screen py-10 px-4">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 translate-y-32 opacity-0 transition-all duration-300">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toast-message" class="text-sm font-semibold">Campaign submitted successfully!</span>
+    </div>
+
+    <div class="max-w-3xl mx-auto space-y-8">
+        <!-- Header -->
+        <div class="text-center space-y-3">
+            <a href="index.html" class="inline-flex items-center gap-2 text-sm font-bold text-brand-600 dark:text-brand-400 hover:underline mb-2">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Mamachi Feed
+            </a>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight">
+                Launch Your <span class="gradient-text">AI Ad Campaign</span>
+            </h1>
+            <p class="text-slate-600 dark:text-slate-400 max-w-xl mx-auto text-sm sm:text-base">
+                Promote your book, product, or service across YouTube, Instagram, TikTok, and our AI publishing network with hyper-local precision.
+            </p>
+        </div>
+
+        <!-- Campaign Submission Form -->
+        <form id="ad-form" onsubmit="submitCampaign(event)" class="glass-panel p-6 sm:p-10 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 space-y-8">
+            
+            <!-- Section 1: Vendor & Product Details -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-black text-brand-500 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="user" class="w-5 h-5"></i> 1. Vendor & Product Information
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Your Name / Company</label>
+                        <input type="text" id="vendor_name" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="Acme Publishing">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Contact Email</label>
+                        <input type="email" id="vendor_email" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="creator@acme.com">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Product / Book Title</label>
+                        <input type="text" id="product_title" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="The Future of Autonomous AI">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Destination Landing Page URL</label>
+                        <input type="url" id="destination_url" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="https://yourwebsite.com/offer">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider mb-1">Product Manuscript / Description Snippet</label>
+                    <textarea id="manuscript_text" rows="3" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="Paste a short summary or book excerpt here so our AI can generate hyper-targeted promotional copy..."></textarea>
+                </div>
+            </div>
+
+            <!-- Section 2: Geo-Targeting (Cities & Neighborhoods) -->
+            <div class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <h3 class="text-lg font-black text-brand-500 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5"></i> 2. Hyper-Local Geo-Targeting
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Target Cities (Comma separated)</label>
+                        <input type="text" id="target_cities" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="New York City, London, Tokyo">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Target Neighborhoods / Postal Codes</label>
+                        <input type="text" id="target_neighborhoods" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="Manhattan, SoHo, 10001">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Billing Model & Spending Caps -->
+            <div class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <h3 class="text-lg font-black text-brand-500 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="credit-card" class="w-5 h-5"></i> 3. Billing Model & Budget Caps
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <label class="border-2 border-brand-500 bg-brand-500/5 p-4 rounded-2xl cursor-pointer flex flex-col justify-between">
+                        <div>
+                            <input type="radio" name="billing_model" value="hourly" checked class="mb-2">
+                            <span class="block font-black text-sm">Flash Hourly</span>
+                            <span class="text-xs text-slate-500">$1.99 / hour</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-brand-600 mt-2 uppercase">Instant Burst</span>
+                    </label>
+                    <label class="border border-slate-300 dark:border-slate-700 p-4 rounded-2xl cursor-pointer flex flex-col justify-between hover:border-brand-500">
+                        <div>
+                            <input type="radio" name="billing_model" value="daily" class="mb-2">
+                            <span class="block font-black text-sm">Daily Surge</span>
+                            <span class="text-xs text-slate-500">$12.99 / day</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 mt-2 uppercase">Most Popular</span>
+                    </label>
+                    <label class="border border-slate-300 dark:border-slate-700 p-4 rounded-2xl cursor-pointer flex flex-col justify-between hover:border-brand-500">
+                        <div>
+                            <input type="radio" name="billing_model" value="monthly" class="mb-2">
+                            <span class="block font-black text-sm">Monthly Powerhouse</span>
+                            <span class="text-xs text-slate-500">$149.00 / mo</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 mt-2 uppercase">Best Value</span>
+                    </label>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Hourly Spending Cap (USD)</label>
+                        <input type="number" id="hourly_limit_usd" value="3.00" step="0.50" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Daily Spending Cap (USD)</label>
+                        <input type="number" id="daily_limit_usd" value="15.00" step="1.00" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 outline-none text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-black text-base uppercase tracking-wider shadow-xl shadow-brand-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <i data-lucide="zap" class="w-5 h-5"></i> Proceed to Secure Payment & Launch
+            </button>
+        </form>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = message;
+            toast.classList.remove('translate-y-32', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-32', 'opacity-0'), 4000);
+        }
+
+        async function submitCampaign(event) {
+            event.preventDefault();
+            
+            // Gather form data
+            const campaignData = {
+                vendor_name: document.getElementById('vendor_name').value,
+                vendor_email: document.getElementById('vendor_email').value,
+                product_title: document.getElementById('product_title').value,
+                destination_url: document.getElementById('destination_url').value,
+                manuscript_text: document.getElementById('manuscript_text').value,
+                target_cities: document.getElementById('target_cities').value.split(',').map(s => s.trim()).filter(Boolean),
+                target_neighborhoods: document.getElementById('target_neighborhoods').value.split(',').map(s => s.trim()).filter(Boolean),
+                billing_model: document.querySelector('input[name="billing_model"]:checked').value,
+                hourly_limit_usd: parseFloat(document.getElementById('hourly_limit_usd').value),
+                daily_limit_usd: parseFloat(document.getElementById('daily_limit_usd').value),
+                is_active: false, // Will be set to true after Stripe webhook confirms payment
+                fee_paid: false
+            };
+
+            // In Step 2, this will redirect to Stripe Checkout. For now, we simulate a successful submission save.
+            showToast("Campaign configured! Redirecting to secure Stripe Checkout...");
+            console.log("Submitted Campaign Payload:", campaignData);
+            
+            // Simulated delay before success redirect
+            setTimeout(() => {
+                alert("Step 1 complete! In Step 2, we will connect this form to Stripe Checkout and Supabase webhook activation.");
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
