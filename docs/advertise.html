@@ -46,7 +46,7 @@
                 Launch Your <span class="gradient-text">AI Ad Campaign</span>
             </h1>
             <p class="text-slate-600 dark:text-slate-400 max-w-xl mx-auto text-sm sm:text-base">
-                Promote your book, product, or service across YouTube, Instagram, TikTok, and our AI publishing network with hyper-local precision.
+                Promote your book, digital software, e-commerce product, or local service across YouTube, Instagram, TikTok, and our AI publishing network with hyper-local precision.
             </p>
         </div>
 
@@ -70,7 +70,7 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Product / Book Title</label>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Product / Service Title</label>
                         <input type="text" id="product_title" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="The Future of Autonomous AI">
                     </div>
                     <div>
@@ -78,9 +78,29 @@
                         <input type="url" id="destination_url" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="https://yourwebsite.com/offer">
                     </div>
                 </div>
+
+                <!-- Ad Category & Social Handle Fields -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Ad Category / Service Type</label>
+                        <select id="service_category" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                            <option value="book_publication">Book & E-Book Publishing</option>
+                            <option value="digital_product">Digital Software & SaaS Tools</option>
+                            <option value="local_business">Local Service & Store</option>
+                            <option value="online_course">Online Course & Coaching</option>
+                            <option value="ecommerce">E-Commerce & Physical Products</option>
+                            <option value="creative_service">Creative & Freelance Services</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider mb-1">Customer Social Page (Optional)</label>
+                        <input type="text" id="customer_social_handle" class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="@yourhandle (For cross-posting)">
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider mb-1">Product Manuscript / Description Snippet</label>
-                    <textarea id="manuscript_text" rows="3" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="Paste a short summary or book excerpt here so our AI can generate hyper-targeted promotional copy..."></textarea>
+                    <label class="block text-xs font-bold uppercase tracking-wider mb-1">Product Summary / Manuscript Snippet</label>
+                    <textarea id="manuscript_text" rows="3" required class="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm" placeholder="Paste a short summary, book excerpt, or service details here so our AI can generate hyper-targeted promotional copy..."></textarea>
                 </div>
             </div>
 
@@ -168,7 +188,7 @@
         }
 
         function validateForm() {
-            const requiredIds = ['vendor_name', 'vendor_email', 'product_title', 'destination_url', 'manuscript_text'];
+            const requiredIds = ['vendor_name', 'vendor_email', 'product_title', 'destination_url', 'service_category', 'manuscript_text'];
             for (let id of requiredIds) {
                 const el = document.getElementById(id);
                 if (!el || !el.value.trim()) {
@@ -204,7 +224,7 @@
                     });
                 },
                 onApprove: async function(data, actions) {
-                    showToast("Payment approved! Activating campaign...");
+                    showToast("Payment approved! Verifying ad compliance and activating campaign...");
                     
                     const details = await actions.order.capture();
 
@@ -213,6 +233,8 @@
                         vendor_email: document.getElementById('vendor_email').value,
                         product_title: document.getElementById('product_title').value,
                         destination_url: document.getElementById('destination_url').value,
+                        service_category: document.getElementById('service_category').value,
+                        customer_social_handle: document.getElementById('customer_social_handle').value,
                         manuscript_text: document.getElementById('manuscript_text').value,
                         target_cities: document.getElementById('target_cities').value.split(',').map(s => s.trim()).filter(Boolean),
                         target_neighborhoods: document.getElementById('target_neighborhoods').value.split(',').map(s => s.trim()).filter(Boolean),
@@ -224,13 +246,19 @@
                     };
 
                     try {
-                        await fetch('https://your-backend-server.com/paypal-webhook', {
+                        const response = await fetch('https://your-backend-server.com/paypal-webhook', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(campaignData)
                         });
 
-                        window.location.href = "success.html";
+                        const resData = await response.json();
+
+                        if (resData.compliance_status === "rejected") {
+                            alert(`Campaign submitted, but failed global safety checks: ${resData.message}`);
+                        } else {
+                            window.location.href = "success.html";
+                        }
                     } catch (err) {
                         console.error("Backend activation failed:", err);
                         alert("Payment succeeded, but backend recording failed. Please contact support.");
