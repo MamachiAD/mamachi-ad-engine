@@ -18,7 +18,6 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Official PayPal SDK -->
     <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"></script>
     <style>
         .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }
@@ -29,12 +28,17 @@
 
     <div class="max-w-3xl mx-auto space-y-8 w-full">
         
-        <!-- Back Navigation -->
-        <a href="index.html" class="inline-flex items-center gap-2 text-xs font-bold text-sky-400 hover:underline">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Mamachi Feed
-        </a>
+        <!-- Clean Navigation Header -->
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <a href="index.html" class="flex items-center gap-2 text-xs font-bold text-sky-400 hover:underline">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Main Intelligence Feed
+            </a>
+            <a href="index.html" class="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-bold text-xs uppercase hover:bg-slate-800 transition-all">
+                🏠 Home Feed
+            </a>
+        </div>
         
-        <!-- Header -->
+        <!-- Header Title -->
         <div class="text-center space-y-3">
             <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
                 <i data-lucide="zap" class="w-3.5 h-3.5"></i> Self-Serve Onboarding
@@ -43,7 +47,7 @@
                 Launch Your <span class="gradient-text">AI Ad Campaign</span>
             </h1>
             <p class="text-slate-400 text-xs sm:text-sm max-w-xl mx-auto">
-                Promote your book, digital product, e-commerce store, or local service across YouTube, Instagram, TikTok, and our AI publishing network with hyper-local precision.
+                Promote your book, digital product, e-commerce store, or local service across YouTube, Instagram, TikTok, and our AI publishing network.
             </p>
         </div>
 
@@ -59,44 +63,28 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">Your Name / Company</label>
-                        <input type="text" id="vendor_name" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors" placeholder="Acme Publishing">
+                        <input type="text" id="vendor_name" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="Acme Publishing">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">Contact Email</label>
-                        <input type="email" id="vendor_email" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors" placeholder="creator@acme.com">
+                        <input type="email" id="vendor_email" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="creator@acme.com">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">Product / Service Title</label>
-                        <input type="text" id="product_title" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors" placeholder="SI, Super Intelligence Super Wealth">
+                        <input type="text" id="product_title" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="SI, Super Intelligence Super Wealth">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">Destination Landing Page URL</label>
-                        <input type="url" id="destination_url" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors" placeholder="https://amazon.com/dp/yourbook">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Ad Category / Service Type</label>
-                        <select id="service_category" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors">
-                            <option value="book_publication">Book & E-Book Publishing</option>
-                            <option value="digital_software">SaaS & Digital Software</option>
-                            <option value="ecommerce">E-Commerce & Physical Goods</option>
-                            <option value="local_service">Local Service & Store</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Customer Social Page (Optional)</label>
-                        <input type="text" id="social_handle" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors" placeholder="@yourhandle">
+                        <input type="url" id="destination_url" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="https://amazon.com/dp/yourbook">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Product Summary / Manuscript Snippet</label>
-                    <textarea id="manuscript_text" rows="3" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors" placeholder="Paste short description, book excerpt, or value proposition so our AI can generate hyper-targeted promotional copy..."></textarea>
+                    <textarea id="manuscript_text" rows="3" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="Paste short description, book excerpt, or value proposition..."></textarea>
                 </div>
             </div>
 
@@ -108,146 +96,61 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">Cover Image / Banner</label>
-                        <input type="file" id="cover_image" accept="image/*" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-500 file:text-white hover:file:bg-sky-400">
+                        <input type="file" id="cover_image" accept="image/*" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-500 file:text-white">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-300 mb-1">Video Teaser / PDF Sample</label>
-                        <input type="file" id="media_asset" accept="video/*,.pdf" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500">
+                        <input type="file" id="media_asset" accept="video/*,.pdf" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white">
                     </div>
                 </div>
             </div>
 
-            <!-- Section 3: Geographic Reach & Scope -->
+            <!-- Section 3: Geographic Reach -->
             <div class="space-y-4 pt-4 border-t border-slate-800">
                 <h2 class="text-sm font-extrabold text-sky-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <i data-lucide="globe" class="w-4 h-4"></i> 3. Target Audience Reach & Geographic Scope
+                    <i data-lucide="globe" class="w-4 h-4"></i> 3. Geographic Scope
                 </h2>
-                
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Targeting Scope</label>
-                    <select id="target_scope" onchange="toggleGeoFields()" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none transition-colors">
+                    <select id="target_scope" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none">
                         <option value="worldwide">🌍 Worldwide / Global Reach</option>
-                        <option value="continental">🗺️ Continental Scope (e.g. North America, Europe, Africa)</option>
-                        <option value="country">🏳️ Country Level (e.g. United States, Ethiopia, UK)</option>
-                        <option value="regional">🏙️ Regional / State Level (e.g. California, Ontario)</option>
-                        <option value="hyperlocal">📍 Hyper-Local (Specific Cities & Neighborhoods)</option>
+                        <option value="continental">🗺️ Continental Scope</option>
+                        <option value="country">🏳️ Country Level</option>
+                        <option value="regional">🏙️ Regional / State Level</option>
+                        <option value="hyperlocal">📍 Hyper-Local</option>
                     </select>
                 </div>
-
-                <div id="geo_input_container">
-                    <label id="geo_label" class="block text-xs font-bold text-slate-300 mb-1">Target Locations</label>
-                    <input type="text" id="target_locations" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" value="Worldwide" placeholder="Global distribution across all active networks...">
-                </div>
             </div>
 
-            <!-- Section 4: Billing Model & Budget Caps -->
-            <div class="space-y-4 pt-4 border-t border-slate-800">
-                <h2 class="text-sm font-extrabold text-sky-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <i data-lucide="credit-card" class="w-4 h-4"></i> 4. Billing Model & Budget Caps
-                </h2>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <label class="cursor-pointer p-4 rounded-2xl bg-slate-950 border-2 border-sky-500 flex flex-col justify-between transition-all">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-bold text-xs text-white">Flash Hourly</span>
-                            <input type="radio" name="billing_model" value="hourly" checked class="accent-sky-500">
-                        </div>
-                        <span class="text-lg font-black text-sky-400">$1.99 <span class="text-[10px] text-slate-400 font-normal">/ hour</span></span>
-                        <span class="text-[10px] uppercase font-bold text-emerald-400 mt-2">Instant Burst</span>
-                    </label>
-
-                    <label class="cursor-pointer p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex flex-col justify-between transition-all">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-bold text-xs text-white">Daily Surge</span>
-                            <input type="radio" name="billing_model" value="daily" class="accent-sky-500">
-                        </div>
-                        <span class="text-lg font-black text-white">$12.99 <span class="text-[10px] text-slate-400 font-normal">/ day</span></span>
-                        <span class="text-[10px] uppercase font-bold text-sky-400 mt-2">Most Popular</span>
-                    </label>
-
-                    <label class="cursor-pointer p-4 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex flex-col justify-between transition-all">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-bold text-xs text-white">Monthly Powerhouse</span>
-                            <input type="radio" name="billing_model" value="monthly" class="accent-sky-500">
-                        </div>
-                        <span class="text-lg font-black text-white">$149.00 <span class="text-[10px] text-slate-400 font-normal">/ mo</span></span>
-                        <span class="text-[10px] uppercase font-bold text-indigo-400 mt-2">Best Value</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Section 5: Secure Checkout -->
+            <!-- Section 4: Secure Checkout -->
             <div class="space-y-4 pt-6 border-t border-slate-800">
                 <h2 class="text-sm font-extrabold text-sky-400 uppercase tracking-widest flex items-center gap-2">
-                    <i data-lucide="shield-check" class="w-4 h-4"></i> 5. Secure Checkout & Instant Activation
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> 4. Secure Checkout & Instant Activation
                 </h2>
-                <p class="text-xs text-slate-400 leading-relaxed">
-                    Complete your payment below to instantly verify compliance, record your order, and activate your 24/7 automated omnichannel campaign.
-                </p>
-
                 <div id="paypal-button-container" class="pt-2"></div>
             </div>
-
         </form>
     </div>
 
-    <!-- Footer Links -->
+    <!-- Footer -->
     <footer class="max-w-7xl mx-auto px-4 py-10 mt-12 border-t border-slate-800 text-center text-xs text-slate-500 space-y-3 w-full">
         <div class="flex justify-center gap-6 font-semibold">
-            <a href="policy.html" class="hover:text-sky-400 transition-colors">Privacy & Policy</a>
-            <a href="contact.html" class="hover:text-sky-400 transition-colors">Contact Us</a>
+            <a href="index.html" class="hover:text-sky-400">Home Feed</a>
+            <a href="policy.html" class="hover:text-sky-400">Privacy Policy</a>
+            <a href="contact.html" class="hover:text-sky-400">Contact Us</a>
         </div>
         <p>&copy; 2026 Mamachi Automated Advertising Engine. All rights reserved.</p>
     </footer>
 
     <script>
         lucide.createIcons();
-
-        function toggleGeoFields() {
-            const scope = document.getElementById('target_scope').value;
-            const input = document.getElementById('target_locations');
-            const label = document.getElementById('geo_label');
-
-            if (scope === 'worldwide') {
-                label.innerText = 'Target Locations';
-                input.value = 'Worldwide';
-                input.placeholder = 'Global distribution across all networks...';
-            } else if (scope === 'continental') {
-                label.innerText = 'Target Continents (Comma Separated)';
-                input.value = '';
-                input.placeholder = 'e.g. North America, Europe, Asia, Africa';
-            } else if (scope === 'country') {
-                label.innerText = 'Target Countries (Comma Separated)';
-                input.value = '';
-                input.placeholder = 'e.g. United States, United Kingdom, Ethiopia, Canada';
-            } else if (scope === 'regional') {
-                label.innerText = 'Target Regions / States (Comma Separated)';
-                input.value = '';
-                input.placeholder = 'e.g. California, Texas, Greater London, Ontario';
-            } else if (scope === 'hyperlocal') {
-                label.innerText = 'Target Cities & Neighborhoods (Comma Separated)';
-                input.value = '';
-                input.placeholder = 'e.g. New York City, SoHo, 10001, Addis Ababa';
-            }
-        }
-
         paypal.Buttons({
             createOrder: function(data, actions) {
-                let amount = '1.99';
-                const selectedModel = document.querySelector('input[name="billing_model"]:checked').value;
-                if (selectedModel === 'daily') amount = '12.99';
-                if (selectedModel === 'monthly') amount = '149.00';
-
-                return actions.order.create({
-                    purchase_units: [{
-                        description: "Mamachi Ad Campaign (" + selectedModel.toUpperCase() + ")",
-                        amount: { value: amount }
-                    }]
-                });
+                return actions.order.create({ purchase_units: [{ amount: { value: '1.99' } }] });
             },
             onApprove: function(data, actions) {
                 return actions.order.capture().then(function(details) {
-                    alert('Payment successful by ' + details.payer.name.given_name + '! Activating your campaign...');
+                    alert('Payment successful! Activating campaign...');
                     window.location.href = 'index.html';
                 });
             }
