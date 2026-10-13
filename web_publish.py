@@ -71,54 +71,55 @@ def _page(title: str, body: str, desc: str = "", canonical: str = "") -> str:
     {body}
     <script>
         lucide.createIcons();
+        
         // Theme Toggle script
         const themeToggleBtn = document.getElementById('theme-toggle');
-        if (themeToggleBtn) {
-            themeToggleBtn.addEventListener('click', () => {
+        if (themeToggleBtn) {{
+            themeToggleBtn.addEventListener('click', () => {{
                 document.documentElement.classList.toggle('dark');
                 localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-            });
-        }
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            }});
+        }}
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {{
             document.documentElement.classList.add('dark');
-        }
+        }}
         
         // Ad Studio Tab Switcher
-        function switchAdTab(platform) {
+        function switchAdTab(platform) {{
             document.querySelectorAll('.ad-view').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.ad-tab').forEach(el => {
+            document.querySelectorAll('.ad-tab').forEach(el => {{
                 el.classList.remove('bg-white', 'dark:bg-slate-800', 'shadow-sm', 'text-youtube');
                 el.classList.add('text-slate-600', 'dark:text-slate-400');
-            });
+            }});
             const targetView = document.getElementById('ad-view-' + platform);
             const targetTab = document.getElementById('tab-' + platform);
             if (targetView) targetView.classList.remove('hidden');
-            if (targetTab) {
+            if (targetTab) {{
                 targetTab.classList.remove('text-slate-600', 'dark:text-slate-400');
                 targetTab.classList.add('bg-white', 'dark:bg-slate-800', 'shadow-sm');
-            }
+            }}
             lucide.createIcons();
-        }
+        }}
 
         // Simulate Ad Click & Toast Notification
-        function simulateAdClick(platform) {
-            showToast(`Redirecting user from ${platform} Ad to checkout offer...`);
-        }
+        function simulateAdClick(platform) {{
+            showToast("Redirecting user from " + platform + " Ad to checkout offer...");
+        }}
 
-        function showToast(msg) {
+        function showToast(msg) {{
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
-            if (toast && toastMsg) {
+            if (toast && toastMsg) {{
                 toastMsg.innerText = msg;
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 3500);
-            }
-        }
+            }}
+        }}
 
-        function copyArticleLink() {
+        function copyArticleLink() {{
             navigator.clipboard.writeText(window.location.href);
             showToast("Page link copied to clipboard!");
-        }
+        }}
     </script>
 </body>
 </html>"""
