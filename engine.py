@@ -161,8 +161,25 @@ def generate_promo(title: str, snippet: str, short_link: str) -> str:
 # -----------------------------------------------------------------------------
 # Product rotation: promote the product that was promoted longest ago
 # -----------------------------------------------------------------------------
-def pick_product() -> Optional[Dict[str, Any]]:
+def url_is_alive(url: str) -> bool:
+    """False only when the page clearly does not work (no connection, timeout, DNS error, 404/410).
+    Amazon and some sites answer bots with 403/429/5xx, which we treat as 'probably fine'."""
+    if not url.startswith("http"):
+        return False
+    try:
+        r = requests.get(url, timeout=12, allow_redirects=True, stream=True,
+                         headers={"User-Agent": "Mozilla/5.0 (compatible; MamachiLinkCheck/1.0)"})
+        r.close()
+        return r.status_code not in (404, 410)
+    except requests.exceptions.RequestException as e:
+        logger.warning("Link check failed for %s: %s", url, e)
+        return False
+
+
+def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
+    exclude = exclude or set()
     rows = supabase.table("mamachi_products").select("*").eq("is_active", True).execute().data or []
+    rows = [r for r in rows if r.get("product_id") not in exclude]
     if not rows:
         return None
     try:
@@ -210,10 +227,22 @@ def run_campaign() -> bool:
     if DRY_RUN:
         logger.info("=== DRY-RUN MODE: no real posts or DB writes ===")
 
-    product = pick_product()
+    product, tried = None, set()
+    for _ in range(5):
+        cand = pick_product(exclude=tried)
+        if not cand:
+            break
+        if url_is_alive(cand.get("destination_url") or ""):
+            product = cand
+            break
+        logger.error("Destination does not respond, skipping product '%s': %s",
+                     cand.get("product_title"), cand.get("destination_url"))
+        send_alert("Product destination link is dead, fix destination_url",
+                   {"product": cand.get("product_title"), "url": cand.get("destination_url")})
+        tried.add(cand.get("product_id"))
     if not product:
-        logger.error("No active products found")
-        send_alert("No active products found")
+        logger.error("No active product with a working destination link")
+        send_alert("No active product with a working destination link")
         return False
 
     title = product.get("product_title")
@@ -265,7 +294,7 @@ def run_campaign() -> bool:
     # Web channel: always on, no secrets needed.
     web_url = None if DRY_RUN else publish_web(title, body, short_link, tag_list, product_id,
                                                brand=os.environ.get("BRAND_NAME", "Mamachi"))
-    manual["web"] = ("posted", web_url or "docs/ updated") if web_url else (("dry-run", "") if DRY_RUN else ("failed", "see log"))
+    manual["web"] = ("posted", f"files written to docs/; live at {web_url} once Pages deploys") if web_url else (("dry-run", "") if DRY_RUN else ("failed", "see log"))
     platforms.write_summary(statuses, manual)
 
     posted = [n for n, s in {**statuses, **manual}.items() if s[0] == "posted"]
