@@ -1,0 +1,61 @@
+<!-- Supabase Client Library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Place this container div wherever you want the updates to appear on your site -->
+<div id="campaign-feed">
+  <p>Loading latest updates...</p>
+</div>
+
+<script>
+  // 1. Initialize Supabase Client
+  const SUPABASE_URL = "https://hwmuvewmkytzqnivperx.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3bXV2ZXdta3l0enFuaXZwZXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODgwOTMsImV4cCI6MjEwNzM2NDA5M30.bc2CKYxdHmX6GWs_sRjd-gZhLsgSiNTfOHySjYnFv0k";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // 2. Fetch and render campaign posts
+  async function loadBookFeed() {
+    const feedContainer = document.getElementById("campaign-feed");
+
+    const { data: logs, error } = await supabaseClient
+      .from("mamachi_campaign_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error("Error loading feed:", error);
+      feedContainer.innerHTML = "<p>Unable to load updates at this time.</p>";
+      return;
+    }
+
+    if (!logs || logs.length === 0) {
+      feedContainer.innerHTML = "<p>No recent announcements available.</p>";
+      return;
+    }
+
+    feedContainer.innerHTML = "";
+
+    logs.forEach(log => {
+      const card = document.createElement("div");
+      card.style.cssText = "border: 1px solid #e0e0e0; padding: 16px; margin-bottom: 16px; border-radius: 8px; font-family: sans-serif;";
+
+      const caption = document.createElement("p");
+      caption.textContent = log.generated_caption;
+      caption.style.cssText = "font-size: 1rem; color: #333; line-height: 1.5; margin: 0 0 8px 0;";
+
+      const link = document.createElement("a");
+      link.href = log.short_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "Get the Book →";
+      link.style.cssText = "display: inline-block; font-weight: bold; color: #0066cc; text-decoration: none;";
+
+      card.appendChild(caption);
+      card.appendChild(link);
+      feedContainer.appendChild(card);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", loadBookFeed);
+</script>
