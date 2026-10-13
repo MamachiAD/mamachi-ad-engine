@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mamachi Intelligence Feed & Automated Ads</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -11,7 +10,8 @@
             theme: {
                 extend: {
                     colors: { brand: { 500: '#0ea5e9', 600: '#0284c7' } },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    animation: { 'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
                 }
             }
         }
@@ -23,7 +23,7 @@
         .gradient-text { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between">
 
     <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -37,9 +37,9 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12 w-full">
         <section class="max-w-4xl mx-auto text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider animate-pulse-slow">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Mamachi Intelligence Feed
             </div>
             <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
@@ -60,12 +60,12 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
-        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
+        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between transform hover:-translate-y-1 duration-300">
             <div>
                 <div class="relative aspect-video overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
+                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 animate-pulse-slow" alt="Thumbnail">
                     <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Verified Active
+                        Live Campaign
                     </div>
                 </div>
                 <div class="p-6 space-y-3">
@@ -113,7 +113,7 @@ The intelligence economy does not pay readers. It pays builders. The window is o
                 </div>
             </div>
             <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
-                <a href="posts/20261013-175439.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
+                <a href="posts/20261013-155255.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
                     Read Full Story <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </a>
                 <a href="https://a.co/d/093UboQG" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
@@ -122,12 +122,12 @@ The intelligence economy does not pay readers. It pays builders. The window is o
             </div>
         </div>
         
-        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
+        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between transform hover:-translate-y-1 duration-300">
             <div>
                 <div class="relative aspect-video overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
+                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 animate-pulse-slow" alt="Thumbnail">
                     <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Verified Active
+                        Live Campaign
                     </div>
                 </div>
                 <div class="p-6 space-y-3">
@@ -141,7 +141,7 @@ The intelligence economy does not pay readers. It pays builders. The window is o
                 </div>
             </div>
             <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
-                <a href="posts/20261013-175439.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
+                <a href="posts/20261013-155255.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
                     Read Full Story <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </a>
                 <a href="https://mamachiad.github.io/mamachi-ad-engine/advertise.html" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
@@ -154,7 +154,11 @@ The intelligence economy does not pay readers. It pays builders. The window is o
         </section>
     </main>
 
-    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
+    <footer class="max-w-7xl mx-auto px-4 py-10 mt-12 border-t border-slate-800 text-center text-xs text-slate-500 space-y-3 w-full">
+        <div class="flex justify-center gap-6 font-semibold">
+            <a href="policy.html" class="hover:text-sky-400 transition-colors">Privacy & Policy</a>
+            <a href="contact.html" class="hover:text-sky-400 transition-colors">Contact Us</a>
+        </div>
         <p>&copy; 2026 Mamachi Automated Advertising Engine. All rights reserved.</p>
     </footer>
     <script>lucide.createIcons();</script>

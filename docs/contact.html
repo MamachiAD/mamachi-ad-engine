@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us - Mamachi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>.glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }</style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between">
+    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <a href="index.html" class="font-extrabold text-xl text-white">Mamachi<span class="text-sky-500">.</span></a>
+            <a href="advertise.html" class="px-4 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs uppercase">Launch Ad</a>
+        </div>
+    </header>
+    <main class="max-w-xl mx-auto px-6 py-12 space-y-6 w-full">
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl font-black text-white">Contact Our Support Team</h1>
+            <p class="text-slate-400 text-xs">Have questions about your campaign or media uploads? Send us a message below.</p>
+        </div>
+        <!-- Form submission securely routed via Formspree or backend to mitiku.woldesenbe.org@gmail.com -->
+        <form action="https://formspree.io/f/mitiku.woldesenbe.org@gmail.com" method="POST" class="p-8 rounded-3xl bg-slate-900 border border-slate-800 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Your Name</label>
+                <input type="text" name="name" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Your Email</label>
+                <input type="email" name="email" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Message</label>
+                <textarea name="message" rows="4" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none"></textarea>
+            </div>
+            <button type="submit" class="w-full py-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">Send Secure Message</button>
+        </form>
+    </main>
+    <footer class="py-6 border-t border-slate-800 text-center text-xs text-slate-500">&copy; 2026 Mamachi. All rights reserved.</footer>
+</body>
+</html>
