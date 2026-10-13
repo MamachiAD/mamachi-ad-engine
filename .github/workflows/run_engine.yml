@@ -75,11 +75,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          [ -f docs/posts.json ] || { echo "No docs/posts.json yet, nothing to check."; exit 0; }
+          [ -f docs/posts.json ] || { echo "No docs/posts.json yet, nothing to check."; echo "### Web: docs/ was never created" >> "$GITHUB_STEP_SUMMARY"; exit 0; }
           # Pushes made with the built-in token may not start the Pages build by themselves, so ask for one.
-          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds" >/dev/null 2>&1 \
-            && echo "Pages build requested" \
-            || echo "Could not request a build (Pages not enabled? Settings > Pages > Deploy from a branch > main > /docs)"
+          if gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds" >/tmp/build.txt 2>&1; then BUILD="requested OK"; else BUILD="FAILED: $(head -c 300 /tmp/build.txt)"; fi
+          git fetch origin "$GITHUB_REF_NAME" -q 2>/dev/null || true
+          {
+            echo "### Pages diagnostics"
+            echo '```'
+            echo "docs/index.html committed on origin/$GITHUB_REF_NAME: $(git ls-tree -r --name-only FETCH_HEAD docs/index.html 2>/dev/null | wc -l)  (1 = yes, 0 = NO)"
+            echo "last commit touching docs/: $(git log -1 --format='%h %ar' -- docs 2>/dev/null)"
+            echo "pages build request: $BUILD"
+            echo "repo private: $(gh api "repos/${GITHUB_REPOSITORY}" --jq .private 2>&1 | head -c 200)"
+            echo "pages settings: $(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '{status,html_url,build_type,source}' 2>&1 | head -c 400)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
           URL=$(python3 -c "import json,os;p=json.load(open('docs/posts.json'))[0]['id'];o,r=os.environ['GITHUB_REPOSITORY'].split('/');print(f'https://{o.lower()}.github.io/{r}/posts/{p}.html')")
           for i in $(seq 1 16); do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo 000)
@@ -90,7 +99,7 @@ jobs:
             echo "### Web page is live ✅" >> "$GITHUB_STEP_SUMMARY"; echo "$URL" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "### Web page not live yet ⏳ (HTTP $CODE)" >> "$GITHUB_STEP_SUMMARY"
-            echo "Check: Settings > Pages is 'Deploy from a branch', branch main, folder /docs; repo is public (free plan); Actions tab shows 'pages build and deployment'." >> "$GITHUB_STEP_SUMMARY"
+            echo "Fix: Settings > Pages > Source 'Deploy from a branch' > branch main > folder /docs > Save. Repo must be public on a free plan." >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Keep generated media (TikTok/Instagram packages)
         if: always()
