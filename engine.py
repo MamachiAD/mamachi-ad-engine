@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, List
 
 import requests
 from google import genai
@@ -45,6 +45,13 @@ SHORTIO_DOMAIN = _get_env("SHORTIO_DOMAIN") or "mamachi-engine.s.gy"
 DRY_RUN = _get_env("DRY_RUN").lower() in ("1", "true", "yes")
 ALERT_WEBHOOK_URL = _get_env("ALERT_WEBHOOK_URL")
 
+# Models to try (in order of preference)
+GEMINI_MODELS: List[str] = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+]
+
 # -----------------------------------------------------------------------------
 # Clients
 # -----------------------------------------------------------------------------
@@ -65,7 +72,7 @@ def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
 
 
 # -----------------------------------------------------------------------------
-# Social posting (all optional – safe to run with zero credentials)
+# Social posting (all optional – safe with zero credentials)
 # -----------------------------------------------------------------------------
 def post_to_facebook(text: str, link: str) -> bool:
     if DRY_RUN:
@@ -205,7 +212,7 @@ def shorten_link(original_url: str) -> Dict[str, Any]:
 
 
 # -----------------------------------------------------------------------------
-# Gemini
+# Gemini with multi-model fallback + static fallback
 # -----------------------------------------------------------------------------
 def generate_promo(title: str, snippet: str, short_link: str) -> str:
     prompt = (
@@ -215,26 +222,47 @@ def generate_promo(title: str, snippet: str, short_link: str) -> str:
         "Tone: professional yet exciting. Avoid hashtags unless they feel natural."
     )
 
-    logger.info("Generating promo with Gemini...")
-    last_error = None
+    logger.info("Generating promo with Gemini (multi-model fallback enabled)...")
 
-    for attempt in range(1, 4):
-        try:
-            response = ai_client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=prompt,
-            )
-            text = (response.text or "").strip()
-            if text:
-                return text
-            raise ValueError("Empty response from Gemini")
-        except Exception as e:
-            last_error = e
-            wait = 2 ** attempt
-            logger.warning("Gemini attempt %d failed: %s → retry in %ds", attempt, e, wait)
-            time.sleep(wait)
+    last_error: Optional[Exception] = None
 
-    raise RuntimeError(f"Gemini failed after 3 attempts: {last_error}")
+    for model in GEMINI_MODELS:
+        for attempt in range(1, 4):  # 3 attempts per model
+            try:
+                response = ai_client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                )
+                text = (response.text or "").strip()
+                if text:
+                    logger.info("Successfully generated promo with model: %s", model)
+                    return text
+                raise ValueError("Empty response from Gemini")
+            except Exception as e:
+                last_error = e
+                wait = min(2 ** attempt * 3, 30)  # 6s → 12s → 24s (capped)
+                logger.warning(
+                    "Model %s attempt %d failed: %s → retry in %ds",
+                    model, attempt, e, wait,
+                )
+                time.sleep(wait)
+
+    # Final safety net – never let the campaign crash
+    logger.error(
+        "All Gemini models failed after retries. Using static fallback. Last error: %s",
+        last_error,
+    )
+    send_alert(
+        "Gemini completely unavailable – used static fallback promo",
+        {"last_error": str(last_error)},
+    )
+
+    # Clean static fallback that still includes the link
+    return (
+        f"Discover how Super-Intelligence is rewriting the rules of wealth in "
+        f"'{title}'. Position yourself ahead of the curve before everyone else. "
+        f"{short_link}"
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -276,7 +304,7 @@ def run_campaign() -> None:
     short_data = shorten_link(destination_url)
     short_link = short_data["short_url"]
 
-    # 3. Generate promo
+    # 3. Generate promo (never raises – has static fallback)
     snippet = manuscript[:500] if manuscript else title
     promo_text = generate_promo(title, snippet, short_link)
     logger.info("Generated copy:\n%s", promo_text)
