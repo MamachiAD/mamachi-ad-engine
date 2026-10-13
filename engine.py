@@ -23,6 +23,9 @@ from video_engine import (
     prepare_instagram_package,
 )
 
+# -----------------------------------------------------------------------------
+# Logging Configuration
+# -----------------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -30,6 +33,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# -----------------------------------------------------------------------------
+# Environment Helpers
+# -----------------------------------------------------------------------------
 def _get_env(key: str, required: bool = False) -> str:
     value = os.environ.get(key, "").strip().strip('"\'')
     if required and not value:
@@ -55,13 +61,20 @@ GEMINI_TOTAL_BUDGET_S = 120
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 ai_client = genai.Client(api_key=GEMINI_API_KEY, http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_MS))
 
+# -----------------------------------------------------------------------------
+# Text Helpers
+# -----------------------------------------------------------------------------
 def clean_text(text: str) -> str:
+    """Remove Markdown marks that social sites would show literally."""
     return " ".join(text.replace("*", "").replace("`", "").split()) if "\n" not in text else \
         "\n".join(" ".join(line.replace("*", "").replace("`", "").split()) for line in text.splitlines()).strip()
 
 def strip_link(text: str, link: str) -> str:
     return text.replace(link, "").strip()
 
+# -----------------------------------------------------------------------------
+# Alert Helper
+# -----------------------------------------------------------------------------
 def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     if not ALERT_WEBHOOK_URL:
         return
@@ -71,6 +84,9 @@ def send_alert(message: str, extra: Optional[Dict[str, Any]] = None) -> None:
     except Exception as e:
         logger.warning("Failed to send alert: %s", e)
 
+# -----------------------------------------------------------------------------
+# Hourly & Budget Control Check
+# -----------------------------------------------------------------------------
 def is_hourly_campaign_active(campaign: dict) -> bool:
     if campaign.get("compliance_status") != "approved":
         return False
@@ -94,6 +110,9 @@ def is_hourly_campaign_active(campaign: dict) -> bool:
         
     return True
 
+# -----------------------------------------------------------------------------
+# Global Safety & Social Norm Moderation
+# -----------------------------------------------------------------------------
 def check_global_ad_compliance(product_title: str, manuscript_text: str, destination_url: str) -> dict:
     prompt = f"""
     You are an automated ad compliance officer. Review this advertisement submission:
@@ -124,6 +143,9 @@ def check_global_ad_compliance(product_title: str, manuscript_text: str, destina
         logger.warning("Compliance check error: %s", e)
         return {"is_approved": False, "reason": "Moderation service check failed"}
 
+# -----------------------------------------------------------------------------
+# Short.io Integration
+# -----------------------------------------------------------------------------
 def shorten_link(original_url: str) -> Dict[str, Any]:
     result = {"short_url": original_url, "shortio_id": None, "raw": None}
     if not SHORTIO_API_KEY:
@@ -148,10 +170,30 @@ def shorten_link(original_url: str) -> Dict[str, Any]:
         logger.warning("Short.io exception: %s", e)
     return result
 
+# -----------------------------------------------------------------------------
+# Gemini AI Promotional Copy Generation (Safe Targeting Handler)
+# -----------------------------------------------------------------------------
 def generate_promo(title: str, snippet: str, targeting: Optional[dict] = None) -> str:
     targeting = targeting or {}
-    cities = ", ".join(targeting.get("target_cities", [])) or "Global"
-    neighborhoods = ", ".join(targeting.get("target_neighborhoods", [])) or "General"
+    
+    # Safe type conversion for targeting fields
+    raw_cities = targeting.get("target_cities", [])
+    if isinstance(raw_cities, str):
+        cities_list = [c.strip() for c in raw_cities.split(",") if c.strip()]
+    elif isinstance(raw_cities, list):
+        cities_list = [str(c).strip() for c in raw_cities if c]
+    else:
+        cities_list = []
+    cities = ", ".join(cities_list) or "Global"
+
+    raw_neighborhoods = targeting.get("target_neighborhoods", [])
+    if isinstance(raw_neighborhoods, str):
+        neigh_list = [n.strip() for n in raw_neighborhoods.split(",") if n.strip()]
+    elif isinstance(raw_neighborhoods, list):
+        neigh_list = [str(n).strip() for n in raw_neighborhoods if n]
+    else:
+        neigh_list = []
+    neighborhoods = ", ".join(neigh_list) or "General"
 
     prompt = (
         f"Write a promotional post (2 sentences, under 230 characters, plain text, no Markdown, no asterisks) "
@@ -187,6 +229,9 @@ def generate_promo(title: str, snippet: str, targeting: Optional[dict] = None) -
     send_alert("Gemini unavailable, used static fallback promo", {"last_error": str(last_error)})
     return f"New from Mamachi: '{title}'. Explore what's available today."
 
+# -----------------------------------------------------------------------------
+# Product Selection & Rotation
+# -----------------------------------------------------------------------------
 def url_is_alive(url: str) -> bool:
     if not url.startswith("http"):
         return False
@@ -228,6 +273,9 @@ def pick_product(exclude: Optional[set] = None) -> Optional[Dict[str, Any]]:
         return random.choice(never)
     return min(rows, key=lambda p: last[p.get("product_id")])
 
+# -----------------------------------------------------------------------------
+# Public Video Upload
+# -----------------------------------------------------------------------------
 def upload_public_video(path: str) -> Optional[str]:
     bucket = os.environ.get("SUPABASE_VIDEO_BUCKET", "promo-videos")
     name = Path(path).name
@@ -240,6 +288,9 @@ def upload_public_video(path: str) -> Optional[str]:
         logger.warning("Public video upload failed: %s", e)
         return None
 
+# -----------------------------------------------------------------------------
+# Omnichannel Publishing Engine
+# -----------------------------------------------------------------------------
 async def publish_omnichannel_campaign(campaign: dict, generated_asset: dict) -> None:
     product_id = campaign["product_id"]
     try:
@@ -258,6 +309,9 @@ async def publish_omnichannel_campaign(campaign: dict, generated_asset: dict) ->
     if campaign.get("customer_social_tokens"):
         logger.info("Cross-posted to customer's connected social channels")
 
+# -----------------------------------------------------------------------------
+# Main Campaign Runner
+# -----------------------------------------------------------------------------
 def run_campaign() -> bool:
     if DRY_RUN:
         logger.info("=== DRY-RUN MODE: no real posts or DB writes ===")
@@ -358,6 +412,9 @@ def run_campaign() -> bool:
         logger.error("Failed to log campaign: %s", e)
     return True
 
+# -----------------------------------------------------------------------------
+# Script Entrypoint
+# -----------------------------------------------------------------------------
 if __name__ == "__main__":
     try:
         ok = run_campaign()
