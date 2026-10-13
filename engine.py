@@ -2,7 +2,6 @@ import os
 import time
 import requests
 from google import genai
-from google.genai.errors import ServerError
 from supabase import Client, create_client
 
 # 1. Load Environment Secrets
@@ -126,12 +125,13 @@ def run_campaign():
 
     print("Generating promotional copy with Gemini...")
     promo_text = None
-    for model_name in ["gemini-3.8-flash", "gemini-flash-latest"]:
+    for model_name in ["gemini-2.5-flash", "gemini-1.5-flash"]:
         try:
-            ai_response = ai_client.models.generate_content(model_name=model_name, contents=prompt)
+            ai_response = ai_client.models.generate_content(model=model_name, contents=prompt)
             promo_text = ai_response.text
             break
-        except ServerError:
+        except Exception as e:
+            print(f"Model {model_name} failed: {e}")
             time.sleep(2)
 
     if not promo_text:
