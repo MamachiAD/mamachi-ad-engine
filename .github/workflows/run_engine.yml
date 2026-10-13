@@ -7,18 +7,18 @@ on:
 
 jobs:
   run-engine:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04          # ← pinned (stable until 2026+)
     timeout-minutes: 45
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5   # ← newer version
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-          cache: 'pip'          # works only if requirements.txt exists
+          cache: 'pip'
 
       - name: Install system dependencies (FFmpeg)
         run: |
@@ -59,7 +59,7 @@ jobs:
 
       - name: Upload generated media
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: generated-media-${{ github.run_id }}
           path: generated_media/
