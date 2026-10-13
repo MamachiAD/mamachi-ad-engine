@@ -1,34 +1,139 @@
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-    <!-- Rich Feed Card Example -->
-    <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl hover:border-slate-700 transition-all flex flex-col justify-between">
-        <div>
-            <!-- Card Thumbnail Image -->
-            <div class="relative aspect-video overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Engine Release">
-                <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow-md">
-                    Featured Release
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mamachi Automated Advertising Engine & Feed</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { brand: { 500: '#0ea5e9', 600: '#0284c7' } },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }
+        .gradient-text { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+
+    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/30">
+                    M
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-extrabold text-xl tracking-tight text-white leading-none">Mamachi<span class="text-sky-500">.</span></span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Automated Ad Engine</span>
+                </div>
+            </a>
+            <div class="flex items-center gap-3">
+                <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-sky-500/25 transition-all flex items-center gap-2">
+                    <i data-lucide="zap" class="w-4 h-4"></i> Launch Ad Campaign
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        
+        <!-- Hero Section -->
+        <section class="max-w-4xl mx-auto text-center space-y-6">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Live Omnichannel Ad Feed
+            </div>
+            <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
+                Discover Verified Offers & <span class="gradient-text">Automated Campaigns</span>
+            </h1>
+            <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
+                Explore active promotions published 24/7 by creators and businesses worldwide through the Mamachi Advertising Engine.
+            </p>
+        </section>
+
+        <!-- Feed Grid -->
+        <section class="max-w-6xl mx-auto space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
+                    <i data-lucide="Flame" class="w-5 h-5 text-amber-400"></i> Active Feed & Releases
+                </h2>
+                <span class="text-xs text-slate-400 font-semibold">Updated 24/7 automatically</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Post Card 1 -->
+                <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="relative aspect-video overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
+                            <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
+                                Verified Active
+                            </div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-semibold text-sky-400">Oct 13, 2026 &bull; Mamachi Research</span>
+                            <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
+                                Mamachi AD Engine Launch
+                            </h3>
+                            <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
+                                Discover how the Mamachi AD Engine automates round-the-clock organic promotion for authors and digital creators across global social networks.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
+                        <a href="posts/20261013-155255.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
+                            Read Full Story <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                        <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
+                            GET IT HERE
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Post Card 2 -->
+                <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="relative aspect-video overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
+                            <div class="absolute top-4 left-4 bg-emerald-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
+                                Featured Campaign
+                            </div>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <span class="text-xs font-semibold text-sky-400">Oct 13, 2026 &bull; Global Macro Brief</span>
+                            <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
+                                SI, Super Intelligence Super Wealth
+                            </h3>
+                            <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
+                                How super-intelligence is shifting institutional asset allocation from labor efficiency to autonomous compounding protocols.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
+                        <a href="posts/20261013-155255.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
+                            Read Full Story <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        </a>
+                        <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
+                            GET IT HERE
+                        </a>
+                    </div>
                 </div>
             </div>
+        </section>
+    </main>
 
-            <!-- Card Content -->
-            <div class="p-6 space-y-3">
-                <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
-                    Mamachi Automated Advertising Engine
-                </h3>
-                <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                    Promote your book, digital service, e-commerce product, or local business 24/7 across YouTube, TikTok, Instagram, and our AI publishing network.
-                </p>
-            </div>
-        </div>
+    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
+        <p>&copy; 2026 Mamachi Automated Advertising Engine. All rights reserved.</p>
+    </footer>
 
-        <!-- Card Footer CTA -->
-        <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/60 mt-4">
-            <a href="posts/latest.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
-                Read Story <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-            </a>
-            <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all">
-                ⚡ GET IT HERE
-            </a>
-        </div>
-    </div>
-</div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
