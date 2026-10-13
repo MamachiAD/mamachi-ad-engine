@@ -1,4 +1,87 @@
-- name: Trigger GitHub Pages build and check live status
+name: run-engine
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"        # Runs every 6 hours
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no real posts)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: engine
+  cancel-in-progress: false
+
+jobs:
+  run-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ffmpeg (optional video generation)
+        if: ${{ vars.VIDEO_ENABLED == 'true' }}
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - run: pip install -r requirements.txt
+      - run: mkdir -p assets generated_media docs docs/posts
+
+      - name: Run engine
+        run: python engine.py
+        env:
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+          VIDEO_ENABLED: ${{ vars.VIDEO_ENABLED || 'false' }}
+          TIKTOK_ENABLED: ${{ vars.TIKTOK_ENABLED || 'false' }}
+          INSTAGRAM_ENABLED: ${{ vars.INSTAGRAM_ENABLED || 'false' }}
+          TTS_ENGINE: ${{ vars.TTS_ENGINE || 'gtts' }}
+          BRAND_NAME: ${{ vars.BRAND_NAME || 'Mamachi' }}
+          DISABLE_PLATFORMS: ${{ vars.DISABLE_PLATFORMS || '' }}
+          
+          # Required Secrets
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SHORTIO_API_KEY: ${{ secrets.SHORTIO_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          
+          # Optional Social Platforms
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+          MASTODON_INSTANCE: ${{ secrets.MASTODON_INSTANCE }}
+          MASTODON_TOKEN: ${{ secrets.MASTODON_TOKEN }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_AUTHOR_URN: ${{ secrets.LINKEDIN_AUTHOR_URN }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          DISCLAIMER: ${{ vars.DISCLAIMER || '' }}
+
+      - name: Publish web feed (docs/)
+        if: always()
+        run: |
+          git config user.name "mamachi-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add docs
+          git diff --cached --quiet || (git commit -m "update web feed" && git push)
+
+      - name: Trigger GitHub Pages build and check live status
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -42,3 +125,12 @@
             echo "URL checked: $URL"
             echo "Fix: Settings > Pages > Source 'Deploy from a branch' > branch main > folder /docs > Save." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Keep generated media (TikTok/Instagram packages)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-media
+          path: generated_media/
+          if-no-files-found: ignore
+          retention-days: 7
