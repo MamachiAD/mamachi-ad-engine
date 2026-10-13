@@ -115,7 +115,7 @@ def run_campaign():
     except Exception as e:
         print(f"Short.io Exception: {e}")
 
-    # Generate promo content with Gemini
+    # Generate promo content with Gemini (with retry attempts)
     snippet = manuscript[:500] if manuscript else title
     prompt = (
         f"Write an engaging 2-sentence promotional post for the book '{title}'. "
@@ -125,17 +125,18 @@ def run_campaign():
 
     print("Generating promotional copy with Gemini...")
     promo_text = None
-    for model_name in ["gemini-3.8-flash"]:
+    for attempt in range(3):
         try:
-            ai_response = ai_client.models.generate_content(model=model_name, contents=prompt)
+            ai_response = ai_client.models.generate_content(model="gemini-3.8-flash", contents=prompt)
             promo_text = ai_response.text
-            break
+            if promo_text:
+                break
         except Exception as e:
-            print(f"Model {model_name} failed: {e}")
-            time.sleep(2)
+            print(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(5)
 
     if not promo_text:
-        raise RuntimeError("Failed to generate content from Gemini.")
+        raise RuntimeError("Failed to generate content from Gemini after multiple attempts.")
 
     print(f"Generated Copy:\n{promo_text}")
 
