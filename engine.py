@@ -31,7 +31,34 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+from datetime import datetime, timezone
 
+def is_hourly_campaign_active(campaign: dict) -> bool:
+    """Checks if an hourly campaign is within its start/end window and budget limits."""
+    now = datetime.now(timezone.utc)
+    
+    # 1. Check time window if start/end times are set
+    start_time = campaign.get("start_time_utc")
+    end_time = campaign.get("end_time_utc")
+    
+    if start_time and now < datetime.fromisoformat(start_time):
+        return False  # Campaign hasn't started yet
+    if end_time and now > datetime.fromisoformat(end_time):
+        return False  # Campaign finished
+        
+    # 2. Check Hourly & Daily Budget Caps
+    hourly_spent = campaign.get("spent_this_hour", 0.0)
+    hourly_limit = campaign.get("hourly_limit_usd") or float("inf")
+    
+    daily_spent = campaign.get("spent_today", 0.0)
+    daily_limit = campaign.get("daily_limit_usd") or float("inf")
+    
+    if hourly_spent >= hourly_limit:
+        return False
+    if daily_spent >= daily_limit:
+        return False
+        
+    return True
 # -----------------------------------------------------------------------------
 # Environment helpers
 # -----------------------------------------------------------------------------
