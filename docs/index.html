@@ -1,87 +1,112 @@
-<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mamachi Automated Advertising Engine & Feed</title>
-    <meta name="description" content="The latest promotions published through the Mamachi Advertising Engine.">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
-    <style>
-        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }
-        .gradient-text { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    </style>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mamachi | Launch Your Ad Campaign</title><meta name="description" content="Your offer on every screen: animated ads created and posted automatically to Instagram, YouTube, TikTok and more.">
+<style>
+:root{--bg:#020617;--card:#0b1226;--line:#1e293b;--mut:#94a3b8;--a:#0ea5e9;--b:#6366f1;--c:#ec4899;--g:linear-gradient(90deg,#0ea5e9,#6366f1,#ec4899)}
+*{box-sizing:border-box;margin:0}html{scroll-behavior:smooth}body{background:var(--bg);color:#e2e8f0;font-family:Inter,system-ui,sans-serif;line-height:1.55;overflow-x:hidden}a{color:inherit;text-decoration:none}
+.w{max-width:1120px;margin:0 auto;padding:0 20px}section{padding:72px 0;scroll-margin-top:64px}h2{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;text-align:center}.sub{color:var(--mut);text-align:center;max-width:620px;margin:8px auto 36px}
+.gt{background:var(--g);-webkit-background-clip:text;background-clip:text;color:transparent}.btn{display:inline-block;background:var(--g);color:#fff;font-weight:800;font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;padding:13px 26px;border-radius:14px;box-shadow:0 8px 30px #0ea5e944;transition:.25s}.btn:hover{transform:translateY(-2px) scale(1.03)}.btn.o{background:none;border:1px solid var(--line);box-shadow:none}
+header{position:sticky;top:0;z-index:50;background:#020617cc;backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}header .w{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.2rem}.m{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#0ea5e9,#6366f1,#ec4899);display:grid;place-items:center;color:#fff}nav{display:flex;gap:22px;font-size:.85rem;color:var(--mut);font-weight:600}nav a:hover{color:#fff}@media(max-width:820px){nav{display:none}}
+.hero{position:relative;text-align:center;padding:90px 0 60px;overflow:hidden}.blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.45;animation:fl 14s ease-in-out infinite}.b1{width:420px;height:420px;background:#0ea5e9;left:-80px;top:-60px}.b2{width:380px;height:380px;background:#6366f1;right:-60px;top:40px;animation-delay:-5s}.b3{width:320px;height:320px;background:#ec4899;left:40%;bottom:-120px;animation-delay:-9s}
+@keyframes fl{50%{transform:translate(40px,30px) scale(1.12)}}.hero .w{position:relative}h1{font-size:clamp(2.2rem,6.5vw,4.6rem);font-weight:900;line-height:1.05}.hero p.l{color:#cbd5e1;max-width:620px;margin:18px auto 28px;font-size:1.1rem}
+.chips{position:relative;height:120px;margin-top:34px}.chip{position:absolute;background:#0b1226cc;border:1px solid var(--line);border-radius:14px;padding:9px 14px;font-size:.8rem;font-weight:700;animation:up 7s ease-in-out infinite;white-space:nowrap}@keyframes up{50%{transform:translateY(-16px)}}
+.tick{margin-top:30px;border:1px solid var(--line);border-radius:999px;padding:9px 18px;display:inline-flex;gap:10px;font-size:.8rem;color:var(--mut);max-width:100%}.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;margin-top:7px;flex:none;animation:pu 1.6s infinite}@keyframes pu{50%{box-shadow:0 0 0 7px #22c55e22}}#tk{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e2e8f0}
+.tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}.tab{border:1px solid var(--line);background:var(--card);color:var(--mut);padding:9px 18px;border-radius:999px;font-weight:700;font-size:.82rem;cursor:pointer;transition:.2s}.tab.on{background:var(--g);color:#fff;border-color:transparent}
+.ch{display:grid;grid-template-columns:1fr 300px;gap:40px;align-items:center}@media(max-width:800px){.ch{grid-template-columns:1fr}}.ch h3{font-size:1.5rem;font-weight:900}.ch ul{margin:14px 0 20px 18px;color:var(--mut)}.pill{display:inline-block;font-size:.7rem;font-weight:800;padding:4px 11px;border-radius:99px;margin-bottom:10px}.live{background:#22c55e22;color:#4ade80}.soon{background:#f59e0b22;color:#fbbf24}
+.ph{width:270px;height:500px;margin:auto;border:6px solid #1e293b;border-radius:34px;background:#000;overflow:hidden;position:relative;animation:fl2 6s ease-in-out infinite;box-shadow:0 30px 70px #0ea5e933}@keyframes fl2{50%{transform:translateY(-10px) rotate(.6deg)}}
+.ph .art{height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;position:relative}.ph .init{position:absolute;top:22%;left:0;right:0;text-align:center;font-size:5rem;font-weight:900;opacity:.9}.ph .t{font-weight:900;font-size:1rem}.ph .bd{padding-right:34px;font-size:.76rem;color:#e2e8f0;margin:5px 0;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}.ph .tg{font-size:.7rem;color:#7dd3fc}
+.ph .bar{position:absolute;top:0;left:0;right:0;padding:12px 14px;font-size:.72rem;font-weight:800;display:flex;justify-content:space-between;background:linear-gradient(#000a,transparent)}.ph .side{position:absolute;right:10px;bottom:90px;display:flex;flex-direction:column;gap:14px;font-size:1.2rem;text-align:center}
+.map{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;max-width:880px;margin:auto}.bar2{display:flex;gap:6px;margin-bottom:12px}.bar2 i{width:10px;height:10px;border-radius:50%;background:#334155}
+.mg{display:grid;grid-template-columns:2fr 1fr;gap:12px}@media(max-width:700px){.mg{grid-template-columns:1fr}}.slot{border:2px dashed #38bdf866;border-radius:14px;padding:16px;text-align:center;cursor:pointer;transition:.25s;position:relative;background:#0ea5e90d;animation:glow 3s infinite}.slot:hover,.slot.on{background:#0ea5e92a;border-style:solid;transform:scale(1.02)}@keyframes glow{50%{border-color:#ec489999}}
+.slot b{display:block}.slot small{color:var(--mut)}.slot.hero{grid-column:1/-1;padding:30px}.feedcol{display:grid;grid-template-columns:1fr 1fr;gap:12px;grid-column:1}.info{margin-top:14px;text-align:center;color:#cbd5e1;font-size:.9rem;min-height:3em}
+.calc{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:26px}@media(max-width:820px){.calc{grid-template-columns:1fr}}label.l{font-size:.7rem;font-weight:800;letter-spacing:.08em;color:var(--mut);display:block;margin:16px 0 8px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}.seg button{flex:1;min-width:84px;background:#050a18;border:1px solid var(--line);color:#cbd5e1;padding:10px 6px;border-radius:12px;font:inherit;font-weight:700;font-size:.8rem;cursor:pointer;transition:.2s}.seg button.on{background:var(--g);border-color:transparent;color:#fff}.seg small{display:block;font-weight:500;opacity:.8;font-size:.68rem}
+input[type=range]{width:100%;accent-color:#6366f1}.out{text-align:center;display:flex;flex-direction:column;justify-content:center}.rings{width:200px;height:200px;margin:0 auto 6px}.rings circle{fill:none;stroke:#38bdf8;transition:.6s}.rings .dotp{fill:#ec4899;animation:pu 2s infinite}
+.price{font-size:3.4rem;font-weight:900;line-height:1}.bk{color:var(--mut);font-size:.82rem;margin:8px 0 14px}.save{display:inline-block;background:#22c55e22;color:#4ade80;font-weight:800;font-size:.75rem;padding:4px 12px;border-radius:99px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;margin-top:22px;font-size:.85rem}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:center}th{color:var(--mut);font-size:.7rem;letter-spacing:.07em}tr.cur td{color:#fff;font-weight:800;background:#6366f11a}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}.st{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}.st i{font-style:normal;display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--g);font-weight:900;margin-bottom:10px}.st p{color:var(--mut);font-size:.88rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px}.card{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;transition:.25s}.card:hover{transform:translateY(-5px);border-color:#38bdf866}
+.card .art{aspect-ratio:16/9;display:grid;place-items:center;font-size:3.4rem;font-weight:900}.card .in{padding:18px;flex:1}.card small{color:#38bdf8;font-weight:700}.card h3{margin:4px 0;font-size:1.1rem}.card p{color:var(--mut);font-size:.85rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card .ft{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-top:1px solid var(--line);font-size:.8rem;font-weight:700;color:#38bdf8}.card.ad{border:2px dashed #ec489977;background:#ec48990d;justify-content:center;text-align:center;padding:30px}
+footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:#64748b;font-size:.8rem}.rv{opacity:0;transform:translateY(26px);transition:.8s}.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
+</style></head><body>
+<header><div class="w"><a class="logo" href="index.html"><span class="m">M</span>Mamachi<span style="color:var(--a)">.</span></a><nav><a href="#channels">Channels</a><a href="#spaces">Ad spaces</a><a href="#pricing">Pricing</a><a href="#feed">Live feed</a></nav><a class="btn" href="advertise.html">Launch Your Ad Campaign</a></div></header>
+<div class="hero"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><div class="w">
+<h1>Your offer. Every screen.<br><span class="gt">Posted automatically.</span></h1>
+<p class="l">We create a fresh animated ad for your book, product or service and publish it across Instagram, YouTube Shorts, TikTok and more, again and again, around the clock.</p>
+<a class="btn" href="#pricing">See pricing</a> <a class="btn o" href="#spaces">Where ads appear</a>
+<div class="chips" aria-hidden="true"><span class="chip" style="left:4%;top:20px">📚 New book</span><span class="chip" style="left:24%;top:60px;animation-delay:-2s">☕ Coffee shop</span><span class="chip" style="left:46%;top:10px;animation-delay:-4s">🎓 Online course</span><span class="chip" style="left:66%;top:56px;animation-delay:-1s">🛍 Store sale</span><span class="chip" style="left:82%;top:14px;animation-delay:-3s">🎧 Podcast</span></div>
+<div class="tick"><span class="dot"></span><span>Latest:</span><span id="tk">loading feed...</span></div></div></div>
 
-    <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <a href="index.html" class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/30">M</div>
-                <div class="flex flex-col">
-                    <span class="font-extrabold text-xl tracking-tight text-white leading-none">Mamachi<span class="text-sky-500">.</span></span>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Automated Ad Engine</span>
-                </div>
-            </a>
-            <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-sky-500/25">
-                Launch Ad Campaign
-            </a>
-        </div>
-    </header>
+<section id="channels"><div class="w rv"><h2>One campaign, <span class="gt">every channel</span></h2><p class="sub">Each post is shaped for the platform it lands on. Pick a channel to preview how an ad looks there.</p>
+<div class="tabs" id="tabs"></div><div class="ch"><div><span class="pill soon" id="pl">Coming online</span><h3 id="cn"></h3><ul id="cl"></ul><a class="btn o" id="cb" href="#pricing">Advertise here</a></div><div class="ph" id="ph"></div></div></div></section>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-        <section class="max-w-4xl mx-auto text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">Live Feed</div>
-            <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
-                Discover Offers &amp; <span class="gradient-text">Automated Campaigns</span>
-            </h1>
-            <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
-                The latest promotions published through the Mamachi Advertising Engine.
-            </p>
-        </section>
+<section id="spaces"><div class="w rv"><h2>Where your ad <span class="gt">appears</span></h2><p class="sub">Tap a space to see what it is. Every space is live on this site and on your chosen channels.</p>
+<div class="map"><div class="bar2"><i></i><i></i><i></i></div><div class="mg">
+<div class="slot hero" data-s="hero"><b>Hero spotlight</b><small>Top of the page + social posts</small></div>
+<div class="feedcol"><div class="slot" data-s="feed"><b>Feed card</b><small>Native card in the live feed</small></div><div class="slot" data-s="feed"><b>Feed card</b><small>Rotates with other ads</small></div></div>
+<div class="slot" data-s="social"><b>Social auto-posts</b><small>Instagram, YouTube, TikTok, X...</small></div></div>
+<div class="info" id="si">Tap a space.</div></div></div></section>
 
-        <section class="max-w-6xl mx-auto space-y-6">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h2 class="text-xl font-extrabold text-white">Latest Posts</h2>
-                <span class="text-xs text-slate-400 font-semibold">Updated automatically</span>
-            </div>
-            <div id="feed" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
-            <p id="empty" class="text-center text-slate-500 text-sm hidden">No posts yet. Check back soon.</p>
-        </section>
-    </main>
+<section id="pricing"><div class="w rv"><h2>Pay for the <span class="gt">time and reach</span> you need</h2><p class="sub">Hourly to yearly. The wider the area, the higher the price. Slide, tap and watch the price move.</p>
+<div class="calc"><div><label class="l">DURATION</label><div class="seg" id="u"></div><label class="l" id="ql"></label><input id="q" type="range" min="1" max="12" value="1">
+<label class="l">REACH (GEOGRAPHY)</label><div class="seg" id="g"></div><label class="l">PLACEMENT</label><div class="seg" id="s"></div></div>
+<div class="out"><svg class="rings" viewBox="0 0 200 200" id="rg"></svg><div class="price gt" id="pr">$0</div><div class="bk" id="bk"></div><div><span class="save" id="sv"></span></div><a class="btn" id="go" href="advertise.html">Continue to checkout</a></div></div>
+<table><thead><tr><th>EVERY</th><th>HOUR</th><th>DAY</th><th>WEEK</th><th>MONTH</th><th>YEAR</th></tr></thead><tbody><tr class="cur"><td>Price for 1</td><td id="t0"></td><td id="t1"></td><td id="t2"></td><td id="t3"></td><td id="t4"></td></tr></tbody></table>
+<p class="sub" style="margin:14px auto 0;font-size:.78rem">Estimates in US dollars. The final amount is confirmed at checkout. Results are not guaranteed.</p></div></section>
 
-    <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
-        <p>&copy; 2026 Mamachi Automated Advertising Engine. All rights reserved.</p>
-    </footer>
+<section><div class="w rv"><h2>How it <span class="gt">works</span></h2><p class="sub"></p><div class="steps"><div class="st"><i>1</i><h3>Tell us your offer</h3><p>Fill in a short brief and pay securely.</p></div><div class="st"><i>2</i><h3>We review it</h3><p>Every ad is checked before it goes live.</p></div><div class="st"><i>3</i><h3>AI makes it unique</h3><p>New words, colours and animation each time.</p></div><div class="st"><i>4</i><h3>It posts on repeat</h3><p>Published to your channels and this site.</p></div></div></div></section>
 
+<section id="feed"><div class="w rv"><h2>Live <span class="gt">feed</span></h2><p class="sub">The latest ads published through Mamachi.</p><div class="grid" id="fg"></div></div></section>
+<footer>&copy; 2026 Mamachi Automated Advertising Engine. All rights reserved.</footer>
 <script>
-// Cards are built from docs/feed.json with textContent only, so post text can never inject HTML.
-const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
-const safe = u => { try { const x = new URL(u, location.href); return ['http:', 'https:'].includes(x.protocol) ? x.href : '#'; } catch { return '#'; } };
-fetch('feed.json', { cache: 'no-store' }).then(r => r.json()).then(items => {
-  const box = document.getElementById('feed');
-  if (!items.length) return document.getElementById('empty').classList.remove('hidden');
-  items.slice(0, 40).forEach((p, i) => {
-    const card = el('div', 'group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between');
-    const top = el('div'), art = el('div', 'relative aspect-video overflow-hidden flex items-center justify-center');
-    const h = hue(p.id || p.title || '');
-    art.style.background = `linear-gradient(135deg, hsl(${h} 70% 35%), hsl(${(h + 60) % 360} 70% 22%))`;
-    art.appendChild(el('span', 'text-white/90 font-black text-6xl', (p.title || 'M').trim().charAt(0).toUpperCase()));
-    if (i === 0) { const b = el('div', 'absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow', 'Latest'); art.appendChild(b); }
-    const info = el('div', 'p-6 space-y-3');
-    info.appendChild(el('span', 'text-xs font-semibold text-sky-400', (p.date || '').slice(0, 10)));
-    info.appendChild(el('h3', 'text-xl font-black text-white', p.title));
-    info.appendChild(el('p', 'text-slate-400 text-xs sm:text-sm clamp3 leading-relaxed', p.body));
-    top.append(art, info);
-    const foot = el('div', 'p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4');
-    const read = el('a', 'text-xs font-bold text-sky-400 hover:underline', 'Read full post \u2192'); read.href = safe(p.url);
-    const get = el('a', 'px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg', 'GET IT HERE'); get.href = safe(p.link); get.rel = 'noopener';
-    foot.append(read, get); card.append(top, foot); box.appendChild(card);
-  });
-}).catch(() => document.getElementById('empty').classList.remove('hidden'));
-</script>
-</body>
-</html>
+const PRICING={cur:'$',rates:{hour:2,day:12,week:60,month:200,year:1800},hrs:{hour:1,day:24,week:168,month:720,year:8760},max:{hour:23,day:6,week:3,month:11,year:5},
+ geo:[{id:'local',n:'Local',s:'One city',m:1},{id:'country',n:'Country',s:'Whole country',m:1.8},{id:'region',n:'Region',s:'Continent',m:3},{id:'world',n:'Worldwide',s:'Everywhere',m:5}],
+ slot:[{id:'feed',n:'Feed card',s:'On this site',m:1},{id:'social',n:'Feed + social',s:'Plus auto-posts',m:1.8},{id:'hero',n:'Hero + social',s:'Top spotlight',m:3}]};
+const NAMES={hour:'Hours',day:'Days',week:'Weeks',month:'Months',year:'Years'},UN=Object.keys(PRICING.rates);
+const CH=[['instagram','Instagram','Reels and image posts in your offer\'s own animation.'],['youtube','YouTube Shorts','Vertical video with your title and link.'],['tiktok','TikTok','Short vertical clips ready to post.'],['x','X','Short text with media and a tracked link.'],['facebook','Facebook','Page posts with link previews.'],['linkedin','LinkedIn','Professional posts for B2B offers.']];
+const SL={hero:'Hero spotlight: the first thing visitors see, plus all social posts. Highest visibility.',feed:'Feed card: a native card in the live feed, rotating fairly with other ads.',social:'Social auto-posts: your ad is published to the connected channels on a repeating schedule.'};
+const $=id=>document.getElementById(id),h=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n},hue=s=>{let k=0;for(const c of String(s))k=(k*31+c.charCodeAt(0))%360;return k},safe=u=>{try{const x=new URL(u,location.href);return['http:','https:'].includes(x.protocol)?x.href:'#'}catch{return'#'}};
+const art=(p,sz)=>{const d=h('div','art'),k=hue(p.id||p.title);d.style.background=`linear-gradient(135deg,hsl(${k} 70% 38%),hsl(${(k+70)%360} 70% 20%))`;return d};
+let feed=[],site={},cur=0,timer;
+/* ---------- pricing ---------- */
+const st={u:'week',q:1,g:1,s:1};
+function seg(el,items,get,set,money){el.innerHTML='';items.forEach((it,i)=>{const b=h('button',get(it,i)?'on':'');b.append(it.n);const s=h('small','',it.s||'');b.append(s);b.onclick=()=>{set(it,i);calc()};el.append(b)})}
+function price(u,q,g,s){return PRICING.rates[u]*q*PRICING.geo[g].m*PRICING.slot[s].m}
+const fmt=v=>PRICING.cur+(v>=100?Math.round(v).toLocaleString():v.toFixed(2).replace(/\.00$/,''));
+let shown=0;function count(to){const from=shown,t0=performance.now();(function f(t){const k=Math.min(1,(t-t0)/500);shown=from+(to-from)*k;$('pr').textContent=fmt(shown);if(k<1)requestAnimationFrame(f)})(t0)}
+function calc(){const {u,q,g,s}=st;q>PRICING.max[u]&&(st.q=PRICING.max[u]);const Q=st.q,r=$('q');r.max=PRICING.max[u];r.value=Q;$('ql').textContent=`HOW MANY ${NAMES[u].toUpperCase()}: ${Q}`;
+ seg($('u'),UN.map(x=>({id:x,n:NAMES[x],s:fmt(PRICING.rates[x])+'/'+x})),it=>it.id===u,it=>{st.u=it.id});
+ seg($('g'),PRICING.geo,(it,i)=>i===g,(it,i)=>{st.g=i});seg($('s'),PRICING.slot,(it,i)=>i===s,(it,i)=>{st.s=i});
+ const p=price(u,Q,g,s),hrs=PRICING.hrs[u]*Q,eff=p/hrs,base=PRICING.rates.hour*PRICING.geo[g].m*PRICING.slot[s].m,sv=Math.max(0,Math.round((1-eff/base)*100));
+ count(p);$('bk').textContent=`${fmt(PRICING.rates[u])} x ${Q} x reach ${PRICING.geo[g].m} x placement ${PRICING.slot[s].m}  |  about ${fmt(eff)} per hour`;
+ $('sv').textContent=sv?`Save ${sv}% vs hourly`:'Pay-as-you-go hourly rate';
+ UN.forEach((x,i)=>$('t'+i).textContent=fmt(price(x,1,g,s)));
+ const R=[28,48,68,90];$('rg').innerHTML='';for(let i=0;i<4;i++){const c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',100);c.setAttribute('cy',100);c.setAttribute('r',R[i]);c.setAttribute('stroke-width',i<=g?2.2:.6);c.setAttribute('opacity',i<=g?1:.25);$('rg').append(c)}
+ for(let i=0;i<=g*6+3;i++){const a=i*2.4,rr=18+(i*37%(R[g]-10)),d=document.createElementNS('http://www.w3.org/2000/svg','circle');d.setAttribute('class','dotp');d.setAttribute('cx',100+rr*Math.cos(a));d.setAttribute('cy',100+rr*Math.sin(a));d.setAttribute('r',2.2);d.style.animationDelay=(i%7)*.25+'s';$('rg').append(d)}
+ $('go').href=`advertise.html?unit=${u}&qty=${Q}&geo=${PRICING.geo[g].id}&slot=${PRICING.slot[s].id}&price=${p.toFixed(2)}`}
+$('q').oninput=e=>{st.q=+e.target.value;calc()};
+/* ---------- channels ---------- */
+function phone(pid,p){const ph=$('ph');ph.innerHTML='';const a=art(p),n=pid==='youtube'?'Shorts':pid==='tiktok'?'TikTok':pid==='instagram'?'Instagram':pid==='x'?'X':pid==='facebook'?'Facebook':'LinkedIn';
+ ph.append(a);a.append(h('div','init',(p.title||'M').trim().charAt(0).toUpperCase()));const bar=h('div','bar');bar.append(h('span','','Mamachi'),h('span','',n));a.append(bar);
+ if(pid==='tiktok'||pid==='instagram'||pid==='youtube'){const sd=h('div','side');['♥','💬','➤'].forEach(x=>sd.append(h('span','',x)));a.append(sd)}
+ const box=h('div');box.append(h('div','t',p.title),h('div','bd',p.body),h('div','tg',(p.tags||[]).map(t=>'#'+t).join(' ')));a.append(box)}
+function pick(i){cur=i;[...$('tabs').children].forEach((b,k)=>b.classList.toggle('on',k===i));const [id,name,desc]=CH[i],s=site[id]||{};
+ $('cn').textContent=name;$('cl').innerHTML='';[desc,'A new animation and caption every time.','Tracked link back to your offer.'].forEach(x=>$('cl').append(h('li','',x)));
+ $('pl').textContent=s.live?'Live now':'Coming online';$('pl').className='pill '+(s.live?'live':'soon');
+ const b=$('cb');if(s.live&&s.url){b.textContent='Follow on '+name;b.href=safe(s.url);b.target='_blank';b.rel='noopener'}else{b.textContent='Advertise here';b.href='#pricing';b.removeAttribute('target')}
+ phone(id,feed[0]||{title:'Your ad here',body:'Your offer appears here, shaped for '+name+'.',tags:['YourBrand'],id:id})}
+CH.forEach((c,i)=>{const b=h('button','tab',c[1]);b.onclick=()=>{clearInterval(timer);pick(i)};$('tabs').append(b)});
+/* ---------- ad spaces ---------- */
+document.querySelectorAll('.slot').forEach(s=>s.onclick=()=>{document.querySelectorAll('.slot').forEach(x=>x.classList.remove('on'));s.classList.add('on');$('si').textContent=SL[s.dataset.s];const i=PRICING.slot.findIndex(x=>x.id===s.dataset.s);st.s=i;calc()});
+/* ---------- feed ---------- */
+function cards(){const g=$('fg');g.innerHTML='';feed.slice(0,8).forEach((p,i)=>{if(i===2||i===5){const c=h('div','card ad');c.append(h('h3','','Your ad could be here'),h('p','','A native card in front of everyone who visits.'));const a=h('a','btn','Reserve this space');a.href='#pricing';a.style.marginTop='14px';c.append(a);g.append(c)}
+ const c=h('div','card'),ar=art(p);ar.className='art';ar.append(h('span','',(p.title||'M').trim().charAt(0).toUpperCase()));const bd=h('div','in');bd.append(h('small','',(p.date||'').slice(0,10)),h('h3','',p.title),h('p','',p.body));
+ const ft=h('div','ft'),r=h('a','','Read post');r.href=safe(p.url);const gt=h('a','','Get it here');gt.href=safe(p.link);gt.rel='noopener';ft.append(r,gt);c.append(ar,bd,ft);g.append(c)});
+ if(!feed.length){const c=h('div','card ad');c.append(h('h3','','The first ads are on their way'));g.append(c)}}
+Promise.all([fetch('feed.json',{cache:'no-store'}).then(r=>r.json()).catch(()=>[]),fetch('site.json',{cache:'no-store'}).then(r=>r.json()).catch(()=>({}))]).then(([f,s])=>{feed=f;site=s;
+ $('tk').textContent=f[0]?f[0].title+': '+f[0].body:'The first ads are on their way';cards();pick(0);timer=setInterval(()=>pick((cur+1)%CH.length),5500)});
+calc();
+const io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&e.target.classList.add('in')),{threshold:.12});document.querySelectorAll('.rv').forEach(x=>io.observe(x));
+</script></body></html>

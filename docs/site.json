@@ -1,0 +1,8 @@
+{
+  "instagram": { "live": false, "url": "" },
+  "youtube":   { "live": false, "url": "" },
+  "tiktok":    { "live": false, "url": "" },
+  "x":         { "live": false, "url": "" },
+  "facebook":  { "live": false, "url": "" },
+  "linkedin":  { "live": false, "url": "" }
+}
