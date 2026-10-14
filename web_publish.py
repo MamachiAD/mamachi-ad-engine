@@ -1,90 +1,70 @@
+"""Writes one web page per post and keeps docs/feed.json up to date.
+Called by engine.py exactly like this:
+    publish_web(title, body, short_link, tag_list, product_id, brand="Mamachi") -> live URL, or None on failure
+The home page (docs/index.html) reads docs/feed.json, so no HTML has to be edited by hand.
 """
-Web channel: always available, needs no secrets. Builds a static site in docs/ (index, one page per post, RSS feed, sitemap)
-for GitHub Pages (Settings > Pages > Deploy from branch > main > /docs).
-"""
-import os
-import json
+import datetime
 import html
+import json
 import logging
-from datetime import datetime, timezone
-from email.utils import format_datetime
+import os
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
-E = html.escape
+DOCS = Path(os.environ.get("DOCS_DIR", "docs"))
+SITE = os.environ.get("SITE_URL", "https://mamachiad.github.io/mamachi-ad-engine").rstrip("/")
+E = lambda s: html.escape(str(s if s is not None else ""), quote=True)
+
+PAGE = """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title} | {brand}</title><meta name="description" content="{desc}"><link rel="canonical" href="{url}">
+<meta property="og:type" content="article"><meta property="og:title" content="{title}"><meta property="og:description" content="{desc}"><meta property="og:url" content="{url}">
+<meta name="twitter:card" content="summary"><meta name="twitter:title" content="{title}"><meta name="twitter:description" content="{desc}">
+<script type="application/ld+json">{ld}</script>
+<style>:root{{--bg:#020617;--card:#0f172a;--line:#1e293b;--mut:#94a3b8}}*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:#e2e8f0;font-family:Inter,system-ui,sans-serif;line-height:1.6}}
+header{{border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem}}
+header a{{color:#fff;text-decoration:none;display:flex;align-items:center;gap:10px}}.m{{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#6366f1,#ec4899);display:grid;place-items:center;color:#fff;font-weight:900}}
+main{{max-width:680px;margin:0 auto;padding:28px 20px}}.back{{color:#38bdf8;font-size:.8rem;text-decoration:none;font-weight:700}}
+h1{{font-size:1.9rem;line-height:1.2;margin:.6em 0 .3em;font-weight:900}}.date{{color:var(--mut);font-size:.8rem}}
+.card{{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;margin-top:20px}}.card p{{margin:0 0 18px;font-size:1.05rem}}
+.btn{{display:inline-block;background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;text-decoration:none;font-weight:800;font-size:.8rem;letter-spacing:.06em;padding:13px 28px;border-radius:14px}}
+.tags{{margin-top:16px;color:var(--mut);font-size:.8rem}}.tags span{{margin-right:8px}}</style></head><body>
+<header><a href="../index.html"><span class="m">M</span>{brand}<span style="color:#0ea5e9">.</span></a></header>
+<main><a class="back" href="../index.html">&larr; Back to feed</a><h1>{title}</h1><div class="date">{date}</div>
+<div class="card"><p>{body}</p><a class="btn" href="{link}" rel="noopener">GET IT HERE &rarr;</a><div class="tags">{tags}</div></div></main></body></html>"""
 
 
-def site_url() -> str:
-    url = os.environ.get("SITE_URL", "").strip().rstrip("/")
-    if url:
-        return url
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    if "/" in repo:
-        owner, name = repo.split("/", 1)
-        return f"https://{owner.lower()}.github.io/{name}"
-    return ""
-
-
-CSS = ("body{font:17px/1.6 Andika,Arial,sans-serif;background:#FFF6DF;color:#3A1A0A;margin:0}"
-       "header{background:linear-gradient(#4FB3EE,#D3EEFB);padding:28px 20px;text-align:center}"
-       "main{max-width:760px;margin:0 auto;padding:20px}"
-       "article{background:#fff;border:3px solid #3A1A0A;border-radius:16px;padding:16px 20px;margin:16px 0}"
-       "a.btn{display:inline-block;background:#E8661A;color:#fff;padding:10px 20px;border:3px solid #3A1A0A;"
-       "border-radius:24px;text-decoration:none;font-weight:700}small{color:#6b4a35}")
-
-
-def _page(title: str, body: str, desc: str = "", canonical: str = "") -> str:
-    can = f'<link rel="canonical" href="{E(canonical)}">' if canonical else ""
-    return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f'<title>{E(title)}</title><meta name="description" content="{E(desc[:160])}">'
-            f'<meta property="og:title" content="{E(title)}"><meta property="og:description" content="{E(desc[:200])}">{can}'
-            f'<link rel="alternate" type="application/rss+xml" href="feed.xml"><style>{CSS}</style></head><body>{body}</body></html>')
-
-
-def publish_web(title: str, body: str, link: str, tags: list, product_id=None, brand: str = "Mamachi", out_dir: str = "docs") -> Optional[str]:
+def _read_feed(path: Path) -> list:
     try:
-        out = Path(out_dir)
-        (out / "posts").mkdir(parents=True, exist_ok=True)
-        db = out / "posts.json"
-        posts = json.loads(db.read_text(encoding="utf-8")) if db.exists() else []
-        now = datetime.now(timezone.utc)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def publish_web(title: str, body: str, link: str, tags: Optional[List[str]] = None,
+                product_id=None, brand: str = "Mamachi") -> Optional[str]:
+    try:
+        now = datetime.datetime.now(datetime.timezone.utc)
         pid = now.strftime("%Y%m%d-%H%M%S")
-        posts.insert(0, {"id": pid, "date": now.isoformat(), "title": title, "body": body, "link": link, "tags": tags, "product_id": product_id})
-        posts = posts[:200]
-        db.write_text(json.dumps(posts, ensure_ascii=False, indent=1), encoding="utf-8")
-
-        base = site_url()
-        for p in posts:
-            art = (f'<main><p><a href="../index.html">All posts</a></p><article><h1>{E(p["title"])}</h1><p>{E(p["body"])}</p>'
-                   f'<p><a class="btn" href="{E(p["link"])}" rel="noopener">Get it here</a></p>'
-                   f'<small>{E(p["date"][:10])}</small></article></main>')
-            (out / "posts" / f'{p["id"]}.html').write_text(
-                _page(f'{p["title"]} | {brand}', f"<header><h2>{E(brand)}</h2></header>{art}", p["body"],
-                      f'{base}/posts/{p["id"]}.html' if base else ""), encoding="utf-8")
-
-        cards = "".join(
-            f'<article><h2><a href="posts/{p["id"]}.html">{E(p["title"])}</a></h2><p>{E(p["body"])}</p>'
-            f'<p><a class="btn" href="{E(p["link"])}" rel="noopener">Get it here</a></p><small>{E(p["date"][:10])}</small></article>'
-            for p in posts[:40])
-        (out / "index.html").write_text(_page(f"{brand}: books and more", f"<header><h1>{E(brand)}</h1><p>New picks, tips and stories.</p></header><main>{cards}</main>",
-                                              f"Latest from {brand}", f"{base}/" if base else ""), encoding="utf-8")
-
-        items = "".join(
-            f'<item><title>{E(p["title"])}</title><link>{E(base)}/posts/{p["id"]}.html</link><guid isPermaLink="false">{p["id"]}</guid>'
-            f'<description>{E(p["body"])}</description><pubDate>{format_datetime(datetime.fromisoformat(p["date"]))}</pubDate></item>'
-            for p in posts[:50])
-        (out / "feed.xml").write_text(
-            f'<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>{E(brand)}</title><link>{E(base)}/</link>'
-            f'<description>Latest from {E(brand)}</description>{items}</channel></rss>', encoding="utf-8")
-        if base:
-            urls = "".join(f"<url><loc>{E(base)}/posts/{p['id']}.html</loc></url>" for p in posts)
-            (out / "sitemap.xml").write_text(
-                f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>{E(base)}/</loc></url>{urls}</urlset>',
-                encoding="utf-8")
-        (out / ".nojekyll").write_text("", encoding="utf-8")
-        logger.info("Web page published to %s/ (live after the workflow commits docs/)", out_dir)
-        return f"{base}/posts/{pid}.html" if base else pid
-    except Exception as e:
-        logger.exception("Web publish failed: %s", e)
+        tags = [t.lstrip("#") for t in (tags or []) if t]
+        url = f"{SITE}/posts/{pid}.html"
+        desc = (body or "")[:200]
+        ld = json.dumps({"@context": "https://schema.org", "@type": "Book", "name": title, "description": desc, "url": link})
+        page = PAGE.format(title=E(title), brand=E(brand), desc=E(desc), url=E(url), ld=ld.replace("</", "<\\/"),
+                           date=now.strftime("%b %d, %Y"), body=E(body), link=E(link),
+                           tags="".join(f"<span>#{E(t)}</span>" for t in tags))
+        (DOCS / "posts").mkdir(parents=True, exist_ok=True)
+        (DOCS / "posts" / f"{pid}.html").write_text(page, encoding="utf-8")
+        feed_path = DOCS / "feed.json"
+        feed = _read_feed(feed_path)
+        feed.insert(0, {"id": pid, "title": title, "body": body, "link": link, "tags": tags,
+                        "product_id": product_id, "date": now.isoformat(timespec="seconds"), "url": f"posts/{pid}.html"})
+        tmp = feed_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(feed[:300], indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(feed_path)
+        logger.info("Web post written: %s", url)
+        return url
+    except Exception:
+        logger.exception("Web publish failed")
         return None

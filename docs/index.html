@@ -3,24 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mamachi Intelligence Feed & Automated Ads</title>
+    <title>Mamachi Automated Advertising Engine & Feed</title>
+    <meta name="description" content="The latest promotions published through the Mamachi Advertising Engine.">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { brand: { 500: '#0ea5e9', 600: '#0284c7' } },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } } }</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <style>
         .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }
         .gradient-text { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
@@ -28,191 +19,69 @@
     <header class="sticky top-0 z-40 w-full glass-panel border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <a href="index.html" class="flex items-center gap-2.5">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg">M</div>
-                <span class="font-extrabold text-xl tracking-tight text-white">Mamachi<span class="text-sky-500">.</span></span>
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-sky-500/30">M</div>
+                <div class="flex flex-col">
+                    <span class="font-extrabold text-xl tracking-tight text-white leading-none">Mamachi<span class="text-sky-500">.</span></span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Automated Ad Engine</span>
+                </div>
             </a>
-            <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg">
-                ⚡ Launch Ad Campaign
+            <a href="advertise.html" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-sky-500/25">
+                Launch Ad Campaign
             </a>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
         <section class="max-w-4xl mx-auto text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Mamachi Intelligence Feed
-            </div>
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">Live Feed</div>
             <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
-                Discover Verified Offers & <span class="gradient-text">Omnichannel Campaigns</span>
+                Discover Offers &amp; <span class="gradient-text">Automated Campaigns</span>
             </h1>
             <p class="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto">
-                Explore active promotions, viral reports, and automated campaigns published 24/7 across our global publishing network.
+                The latest promotions published through the Mamachi Advertising Engine.
             </p>
         </section>
 
         <section class="max-w-6xl mx-auto space-y-6">
             <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h2 class="text-xl font-extrabold text-white flex items-center gap-2">
-                    <i data-lucide="flame" class="w-5 h-5 text-amber-400"></i> Active Feed Releases
-                </h2>
-                <a href="advertise.html" class="text-xs font-bold text-sky-400 hover:underline">Promote Your Product →</a>
+                <h2 class="text-xl font-extrabold text-white">Latest Posts</h2>
+                <span class="text-xs text-slate-400 font-semibold">Updated automatically</span>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
-        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
-            <div>
-                <div class="relative aspect-video overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
-                    <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Omnichannel Active
-                    </div>
-                </div>
-                <div class="p-6 space-y-3">
-                    <span class="text-xs font-semibold text-sky-400">Mamachi Intelligence Feed</span>
-                    <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
-                        SI, Super Intelligence Super Wealth: How Super-Intelligence (SI), Will Rewrite the Rules of Wealth and How to Position Yourself before Everyone Else
-                    </h3>
-                    <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                        Are you ready to unlock the future of AI wealth? SI: Super Intelligence Super Wealth — How Super-Intelligence Will Rewrite the Rules of Wealth and How to Position Yourself Before Everyone Else
-by Mitiku Woldesenbet Gebremichale (Author) - Format: Kindle Edition
-
-Every few generations the economy splits open and a new layer of wealth is deposited. Those who recognized the split in land, railroads, oil, electricity, software, or the internet didn’t just get rich—they defined wealth for a century. You are alive during the next split: the rise of Super-Intelligence (SI).
-
-SI is machine cognition that exceeds the best human minds across virtually all economically valuable domains. It is already moving from laboratory curiosity to economic engine. Those who act while it is still misunderstood will capture disproportionate rewards. Those who treat it as a headline will simply read about the winners.
-
-This book is not about utopia or doom. It is about mechanics: how intelligence becomes money, where the money flows, and the repeatable moves that turn understanding into ownership. You will learn how SI collapses the price of cognition, accelerates discovery, and reshapes entire industries. You will see how ownership, positioning, and timing determine who thrives and who is left behind.
-
-Inside you will discover:
-• The three economic laws of SI and how they convert intelligence into money
-• The four-phase pattern every technological revolution follows
-• Ten “money machines” and portfolio strategies designed for the SI era
-• Practical steps to build startups, digital income streams, and scalable ventures powered by AI
-• How to reskill, adapt, and thrive as cognitive work itself is redefined
-• The ethical and psychological frameworks that protect your wealth and legacy
-
-Unlike hype-driven futurism, this book is precise, occasionally blunt, and deliberately free of exaggeration and fear. It is written from the field—the author has positioned his own family according to these principles. The strategies in Part III are lived practices, not academic theories.
-
-Three facts make this moment different:
-1. Capability is real — SI is already generating billions in revenue and embedded in tools used by millions.
-2. Absorption is fast — adoption curves that once took decades now compress into months.
-3. Access is open — an individual with a laptop can build a business whose production layer is SI, invest in infrastructure, or own distribution channels.
-
-This is your moment. Capability is real. Absorption is fast. Access is open. The only remaining variable is you.
-
-What makes SI: Super Intelligence Super Wealth unique is its focus on positioning before the mainstream catches up. By the time transformation is obvious everywhere, the ownership positions will already have been taken and priced. Your edge lies in acting during the lag—when the technology is real but not yet fully absorbed.
-
-Whether you are an entrepreneur, investor, or forward-thinking professional, this book will help you:
-• Identify industries where SI will collapse costs and create new margins
-• Understand the labor-versus-capital dynamics that will define the next two decades
-• Build resilient strategies that compound prosperity while avoiding hype traps
-• Position yourself not as a consumer of SI, but as an owner of the systems, platforms, and channels where wealth will flow
-
-The intelligence economy does not pay readers. It pays builders. The window is open—but it will not stay open forever.
-                    </p>
-                </div>
-            </div>
-            <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
-                <a href="posts/20261013-192653.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
-                    View Live Syndication <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                </a>
-                <a href="https://a.co/d/093UboQG" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
-                    GET IT HERE
-                </a>
-            </div>
-        </div>
-        
-        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
-            <div>
-                <div class="relative aspect-video overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
-                    <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Omnichannel Active
-                    </div>
-                </div>
-                <div class="p-6 space-y-3">
-                    <span class="text-xs font-semibold text-sky-400">Mamachi Intelligence Feed</span>
-                    <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
-                        SI, Super Intelligence Super Wealth: How Super-Intelligence (SI), Will Rewrite the Rules of Wealth and How to Position Yourself before Everyone Else
-                    </h3>
-                    <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                        A practical breakdown on navigating the super-intelligence economy. Super intelligence is about to fundamentally reshape how the global economy works. This book examines that transition and offers a practical framework to position yourself for super wealth before the shift occurs.
-                    </p>
-                </div>
-            </div>
-            <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
-                <a href="posts/20261013-192653.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
-                    View Live Syndication <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                </a>
-                <a href="https://mamachiad.github.io/mamachi-ad-engine/advertise.html" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
-                    GET IT HERE
-                </a>
-            </div>
-        </div>
-        
-        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
-            <div>
-                <div class="relative aspect-video overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
-                    <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Omnichannel Active
-                    </div>
-                </div>
-                <div class="p-6 space-y-3">
-                    <span class="text-xs font-semibold text-sky-400">Mamachi Intelligence Feed</span>
-                    <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
-                        Mamachi AD Engine Launch
-                    </h3>
-                    <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                        This single shift in super-intelligence is redefining modern wealth creation... Mamachi AD Engine automates 24/7 organic promotion for authors and digital creators without paid ads.
-                    </p>
-                </div>
-            </div>
-            <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
-                <a href="posts/20261013-192653.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
-                    View Live Syndication <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                </a>
-                <a href="https://mamachiad.github.io/mamachi-ad-engine/advertise.html" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
-                    GET IT HERE
-                </a>
-            </div>
-        </div>
-        
-        <div class="group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between">
-            <div>
-                <div class="relative aspect-video overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Thumbnail">
-                    <div class="absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow">
-                        Omnichannel Active
-                    </div>
-                </div>
-                <div class="p-6 space-y-3">
-                    <span class="text-xs font-semibold text-sky-400">Mamachi Intelligence Feed</span>
-                    <h3 class="text-xl font-black text-white group-hover:text-sky-400 transition-colors">
-                        SI, Super Intelligence Super Wealth: How Super-Intelligence (SI), Will Rewrite the Rules of Wealth and How to Position Yourself before Everyone Else
-                    </h3>
-                    <p class="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed">
-                        This single shift in super-intelligence is redefining modern wealth creation... Super intelligence is about to fundamentally reshape how the global economy works. This book examines that transition and offers a practical framework to position yourself for super wealth before the shift occurs.
-                    </p>
-                </div>
-            </div>
-            <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4">
-                <a href="posts/20261013-192653.html" class="text-xs font-bold text-sky-400 hover:underline flex items-center gap-1">
-                    View Live Syndication <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                </a>
-                <a href="https://mamachiad.github.io/mamachi-ad-engine/advertise.html" target="_blank" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg">
-                    GET IT HERE
-                </a>
-            </div>
-        </div>
-        
-            </div>
+            <div id="feed" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+            <p id="empty" class="text-center text-slate-500 text-sm hidden">No posts yet. Check back soon.</p>
         </section>
     </main>
 
     <footer class="max-w-7xl mx-auto px-4 py-10 border-t border-slate-800 text-center text-xs text-slate-500">
         <p>&copy; 2026 Mamachi Automated Advertising Engine. All rights reserved.</p>
     </footer>
-    <script>lucide.createIcons();</script>
+
+<script>
+// Cards are built from docs/feed.json with textContent only, so post text can never inject HTML.
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const safe = u => { try { const x = new URL(u, location.href); return ['http:', 'https:'].includes(x.protocol) ? x.href : '#'; } catch { return '#'; } };
+fetch('feed.json', { cache: 'no-store' }).then(r => r.json()).then(items => {
+  const box = document.getElementById('feed');
+  if (!items.length) return document.getElementById('empty').classList.remove('hidden');
+  items.slice(0, 40).forEach((p, i) => {
+    const card = el('div', 'group rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl hover:border-slate-700 transition-all flex flex-col justify-between');
+    const top = el('div'), art = el('div', 'relative aspect-video overflow-hidden flex items-center justify-center');
+    const h = hue(p.id || p.title || '');
+    art.style.background = `linear-gradient(135deg, hsl(${h} 70% 35%), hsl(${(h + 60) % 360} 70% 22%))`;
+    art.appendChild(el('span', 'text-white/90 font-black text-6xl', (p.title || 'M').trim().charAt(0).toUpperCase()));
+    if (i === 0) { const b = el('div', 'absolute top-4 left-4 bg-sky-500 text-white font-extrabold text-[10px] uppercase px-3 py-1 rounded-full shadow', 'Latest'); art.appendChild(b); }
+    const info = el('div', 'p-6 space-y-3');
+    info.appendChild(el('span', 'text-xs font-semibold text-sky-400', (p.date || '').slice(0, 10)));
+    info.appendChild(el('h3', 'text-xl font-black text-white', p.title));
+    info.appendChild(el('p', 'text-slate-400 text-xs sm:text-sm clamp3 leading-relaxed', p.body));
+    top.append(art, info);
+    const foot = el('div', 'p-6 pt-0 flex items-center justify-between border-t border-slate-800/80 mt-4');
+    const read = el('a', 'text-xs font-bold text-sky-400 hover:underline', 'Read full post \u2192'); read.href = safe(p.url);
+    const get = el('a', 'px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black text-xs uppercase tracking-wider shadow-lg', 'GET IT HERE'); get.href = safe(p.link); get.rel = 'noopener';
+    foot.append(read, get); card.append(top, foot); box.appendChild(card);
+  });
+}).catch(() => document.getElementById('empty').classList.remove('hidden'));
+</script>
 </body>
 </html>
