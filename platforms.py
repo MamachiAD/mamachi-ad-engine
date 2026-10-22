@@ -1,11 +1,13 @@
 """
 Platform switchboard. A platform turns ON by itself when all of its secrets exist.
 Missing secrets => status 'pending' (nothing breaks). Add a secret later and the next run uses it.
+New: per-platform text variants, and paid-region filtering (an Africa-only ad is not posted on channels you tagged for other regions).
 """
+import json
 import os
 import time
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
@@ -32,6 +34,9 @@ class Post:
     video_path: Optional[str] = None
     video_url: Optional[str] = None   # public URL (needed by Instagram)
     product_id: object = None
+    variants: Dict[str, str] = field(default_factory=dict)   # platform -> its own version of the text (paid ads with "unique" style)
+    geo_level: str = "world"                                  # local | country | region | world
+    geo_region: str = "Worldwide"
 
     @property
     def disclaimer_body(self) -> str:
@@ -41,6 +46,19 @@ class Post:
     @property
     def hashtags(self) -> str:
         return " ".join(f"#{t.lstrip('#')}" for t in self.tags[:5])
+
+
+def region_allows(platform: str, geo_level: str, geo_region: str) -> bool:
+    """PLATFORM_REGIONS example: {"telegram":["global"],"facebook":["africa"],"instagram":["africa","europe"]}.
+    A platform that is not listed carries every ad. Worldwide ads go everywhere."""
+    if geo_level == "world" or (geo_region or "").lower() == "worldwide":
+        return True
+    try:
+        mapping = json.loads(env("PLATFORM_REGIONS") or "{}")
+    except Exception:
+        return True
+    regions = [r.lower() for r in mapping.get(platform, [])]
+    return not regions or "global" in regions or (geo_region or "").lower() in regions
 
 
 URL_LEN = 23
@@ -220,13 +238,16 @@ def publish_all(post: Post) -> Dict[str, Tuple[str, str]]:
             out[pl.name] = ("disabled", "DISABLE_PLATFORMS")
         elif miss:
             out[pl.name] = ("pending", "add secrets: " + ", ".join(miss))
+        elif not region_allows(pl.name, post.geo_level, post.geo_region):
+            out[pl.name] = ("skipped", f"outside paid region ({post.geo_region})")
         elif pl.needs_video and not (post.video_path or post.video_url):
             out[pl.name] = ("skipped", "no video this run")
         elif dry_run():
             out[pl.name] = ("dry-run", "would post")
         else:
             try:
-                out[pl.name] = ("posted", "") if pl.fn(post) else ("failed", "see log above")
+                version = replace(post, body=post.variants[pl.name]) if post.variants.get(pl.name) else post
+                out[pl.name] = ("posted", "") if pl.fn(version) else ("failed", "see log above")
             except Exception as e:
                 logger.exception("%s crashed: %s", pl.name, e)
                 out[pl.name] = ("failed", str(e)[:120])

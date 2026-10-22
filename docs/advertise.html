@@ -1,200 +1,87 @@
-<!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Launch Your AI Ad Campaign - Mamachi Ad Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { brand: { 500: '#0ea5e9', 600: '#0284c7' } },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=USD"></script>
-    <style>
-        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); }
-        .gradient-text { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    </style>
-</head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen py-10 px-4 sm:px-6 flex flex-col justify-between">
-
-    <div class="max-w-3xl mx-auto space-y-8 w-full">
-        
-        <!-- Clean Navigation Header -->
-        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
-            <a href="index.html" class="flex items-center gap-2 text-xs font-bold text-sky-400 hover:underline">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Main Intelligence Feed
-            </a>
-            <a href="index.html" class="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-bold text-xs uppercase hover:bg-slate-800 transition-all">
-                🏠 Home Feed
-            </a>
-        </div>
-        
-        <!-- Header Title -->
-        <div class="text-center space-y-3">
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-bold uppercase tracking-wider">
-                <i data-lucide="zap" class="w-3.5 h-3.5"></i> Self-Serve Onboarding
-            </div>
-            <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight">
-                Launch Your <span class="gradient-text">AI Ad Campaign</span>
-            </h1>
-            <p class="text-slate-400 text-xs sm:text-sm max-w-xl mx-auto">
-                Promote your book, digital product, e-commerce store, or local service across YouTube, Instagram, TikTok, and our AI publishing network.
-            </p>
-        </div>
-
-        <!-- Main Form -->
-        <form id="adForm" class="p-8 sm:p-10 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-8">
-            
-            <!-- Section 1: Vendor & Product Information -->
-            <div class="space-y-4">
-                <h2 class="text-sm font-extrabold text-sky-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <i data-lucide="user" class="w-4 h-4"></i> 1. Vendor & Product Information
-                </h2>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Your Name / Company</label>
-                        <input type="text" id="vendor_name" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="Acme Publishing">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Contact Email</label>
-                        <input type="email" id="vendor_email" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="creator@acme.com">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Product / Service Title</label>
-                        <input type="text" id="product_title" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="SI, Super Intelligence Super Wealth">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Destination Landing Page URL</label>
-                        <input type="url" id="destination_url" required class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="https://amazon.com/dp/yourbook">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Product Summary / Manuscript Snippet</label>
-                    <textarea id="manuscript_text" rows="3" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none" placeholder="Paste short description, book excerpt, or value proposition..."></textarea>
-                </div>
-            </div>
-
-            <!-- Section 2: Custom Media & Asset Uploads -->
-            <div class="space-y-4 pt-4 border-t border-slate-800">
-                <h2 class="text-sm font-extrabold text-sky-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> 2. Custom Media & Asset Uploads
-                </h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Cover Image / Banner</label>
-                        <input type="file" id="cover_image" accept="image/*" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-500 file:text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 mb-1">Video Teaser / PDF Sample</label>
-                        <input type="file" id="media_asset" accept="video/*,.pdf" class="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Section 3: Geographic Reach -->
-            <div class="space-y-4 pt-4 border-t border-slate-800">
-                <h2 class="text-sm font-extrabold text-sky-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
-                    <i data-lucide="globe" class="w-4 h-4"></i> 3. Geographic Scope
-                </h2>
-                <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Targeting Scope</label>
-                    <select id="target_scope" class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:border-sky-500 focus:outline-none">
-                        <option value="worldwide">🌍 Worldwide / Global Reach</option>
-                        <option value="continental">🗺️ Continental Scope</option>
-                        <option value="country">🏳️ Country Level</option>
-                        <option value="regional">🏙️ Regional / State Level</option>
-                        <option value="hyperlocal">📍 Hyper-Local</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Section 4: Secure Checkout -->
-            <div class="space-y-4 pt-6 border-t border-slate-800">
-                <h2 class="text-sm font-extrabold text-sky-400 uppercase tracking-widest flex items-center gap-2">
-                    <i data-lucide="shield-check" class="w-4 h-4"></i> 4. Secure Checkout & Instant Activation
-                </h2>
-                <div id="paypal-button-container" class="pt-2"></div>
-            </div>
-        </form>
-    </div>
-
-    <!-- Footer -->
-    <footer class="max-w-7xl mx-auto px-4 py-10 mt-12 border-t border-slate-800 text-center text-xs text-slate-500 space-y-3 w-full">
-        <div class="flex justify-center gap-6 font-semibold">
-            <a href="index.html" class="hover:text-sky-400">Home Feed</a>
-            <a href="policy.html" class="hover:text-sky-400">Privacy Policy</a>
-            <a href="contact.html" class="hover:text-sky-400">Contact Us</a>
-        </div>
-        <p>&copy; 2026 Mamachi Automated Advertising Engine. All rights reserved.</p>
-    </footer>
-
-    <script>
-        lucide.createIcons();
-
-        // Base prices for billing models
-        const basePrices = {
-            hourly: 1.99,
-            daily: 12.99,
-            monthly: 149.00
-        };
-
-        // Scale multipliers based on geographic reach
-        const scopeMultipliers = {
-            hyperlocal: 1.0,    // Base price
-            regional: 1.5,      // +50%
-            country: 2.5,       // 2.5x
-            continental: 5.0,   // 5x
-            worldwide: 10.0     // 10x Global Powerhouse
-        };
-
-        function calculateTotal() {
-            // Default to hourly if no radio button group is selected yet
-            const selectedModelInput = document.querySelector('input[name="billing_model"]:checked');
-            const selectedModel = selectedModelInput ? selectedModelInput.value : 'hourly';
-            const scope = document.getElementById('target_scope').value;
-            
-            const base = basePrices[selectedModel] || 1.99;
-            const multiplier = scopeMultipliers[scope] || 1.0;
-            
-            return (base * multiplier).toFixed(2);
-        }
-
-        // Render PayPal Buttons with Dynamic Geographic Pricing
-        paypal.Buttons({
-            createOrder: function(data, actions) {
-                let finalAmount = calculateTotal();
-                const selectedModelInput = document.querySelector('input[name="billing_model"]:checked');
-                const selectedModel = selectedModelInput ? selectedModelInput.value : 'hourly';
-                const scope = document.getElementById('target_scope').value;
-
-                return actions.order.create({
-                    purchase_units: [{
-                        description: `Mamachi Ad Campaign (${selectedModel.toUpperCase()} - ${scope.toUpperCase()})`,
-                        amount: { value: finalAmount }
-                    }]
-                });
-            },
-            onApprove: function(data, actions) {
-                return actions.order.capture().then(function(details) {
-                    alert('Payment successful! Total paid: \$' + calculateTotal() + '. Activating campaign...');
-                    window.location.href = 'index.html';
-                });
-            }
-        }).render('#paypal-button-container');
-    </script>
-</body>
-</html>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Launch Your Smart Ads Campaign | Mamachi Ads</title><meta name="description" content="Order your animated social ads: choose time, reach and placement, see your posting schedule, and pay securely.">
+<style>:root{--bg:#020617;--card:#0b1226;--line:#1e293b;--fg:#e2e8f0;--mut:#94a3b8;--ac:#38bdf8;--g:linear-gradient(90deg,#0ea5e9,#6366f1,#ec4899)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif;line-height:1.55}main{max-width:620px;margin:0 auto;padding:22px}a{color:var(--ac)}
+h1{text-align:center;font-size:clamp(1.8rem,5vw,2.6rem);font-weight:900;margin:.5em 0 .2em}h1 span{background:var(--g);-webkit-background-clip:text;background-clip:text;color:transparent}.sub{text-align:center;color:var(--mut);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;margin-top:18px}h2{font-size:.74rem;letter-spacing:.09em;color:var(--ac);border-bottom:1px solid var(--line);padding-bottom:6px;margin:20px 0 10px}
+label{font-size:.72rem;color:var(--mut);font-weight:700;display:block}input,select,textarea{width:100%;padding:10px;margin:4px 0 12px;border-radius:10px;border:1px solid var(--line);background:#050a18;color:var(--fg);font:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:520px){.row{grid-template-columns:1fr}}.chk{display:flex;gap:8px;align-items:flex-start;font-size:.8rem;color:var(--fg);background:#050a18;border:1px solid var(--line);border-radius:12px;padding:10px;margin:6px 0}.chk input{width:auto;margin:3px 0 0}
+.sum{background:#050a18;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:6px}.big{font-size:2.4rem;font-weight:900;background:var(--g);-webkit-background-clip:text;background-clip:text;color:transparent}
+table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:8px}td,th{padding:6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--mut);font-size:.7rem}small{color:var(--mut);font-size:.74rem}.hp{position:absolute;left:-9999px}#msg{margin-top:12px;font-size:.9rem;min-height:1.4em}#own{display:none}
+</style></head><body><main>
+<p class="sub"><a href="index.html">&larr; Back to Mamachi Ads</a></p>
+<h1>Launch Your <span>Smart Ads Campaign</span></h1><p class="sub">Think outside the box, use SI for your business.</p>
+<form id="f" class="card" novalidate>
+<h2>1. YOUR OFFER</h2>
+<div class="row"><label>Your name / company<input name="name" required maxlength="80"></label><label>Contact email (private)<input name="email" type="email" required></label></div>
+<div class="row"><label>Product or service title<input name="productTitle" required maxlength="120"></label><label>Destination page (https)<input name="link" type="url" required placeholder="https://"></label></div>
+<label>What are you promoting? (1 to 3 sentences)<textarea name="summary" rows="3" required minlength="10" maxlength="600"></textarea></label>
+<label>Your ad prompt (optional)<textarea name="adPrompt" rows="3" maxlength="500" placeholder="For example: warm, family tone; mention free parking and our Saturday special"></textarea><small>Tell our AI what to stress: tone, features, the offer. Please leave links out; we add your link for you. Our AI keeps every ad honest, so it will not make income or result promises.</small></label>
+<div class="row"><label>Write my ads in<select name="language"></select></label><label>Hashtags (optional)<input name="hashtags" maxlength="120" placeholder="#coffee #local"></label></div>
+<h2>2. TIME, REACH AND PLACEMENT</h2>
+<div class="row"><label>Duration<select name="unit"></select></label><label>How many<input name="qty" type="number" min="1" value="1"></label></div>
+<div class="row"><label>Reach level<select name="geoLevel"></select></label><label id="rg_region">Region<select name="geoRegion"></select></label></div>
+<div class="row" id="rg_country"><label>Country<select name="geoCountry"></select></label><label id="rg_areas">Areas or cities (up to 3, separated by commas)<input name="areas" maxlength="150" placeholder="Westlands, Nairobi CBD"></label></div>
+<div class="sum" id="pz" style="margin:4px 0 12px"></div>
+<label>Placement<select name="slot"></select></label>
+<label class="chk"><input type="checkbox" name="unique" checked><span><b>A different text on each platform</b><br><small id="xu"></small></span></label>
+<label class="chk"><input type="checkbox" name="ownSocial"><span><b>Also post on my own social accounts</b><br><small id="xo"></small></span></label>
+<div id="own"><small>We only ever post <b>your ad, with your link</b>, on <b>the accounts you connect here</b>. Details are encrypted, used only during your paid period, and deleted when it ends or when you disconnect. Available today:</small>
+<div class="row"><label>Bluesky handle<input name="bs_handle" placeholder="you.bsky.social"></label><label>Bluesky app password (not your login password)<input name="bs_pass" type="password" autocomplete="off"></label></div>
+<div class="row"><label>Mastodon server<input name="ma_inst" placeholder="mastodon.social"></label><label>Mastodon access token<input name="ma_tok" type="password" autocomplete="off"></label></div>
+<div class="row"><label>Telegram channel (add <b id="bot"></b> as an admin who can post)<input name="tg_chan" placeholder="@yourchannel"></label><label>Discord webhook URL<input name="dc_hook" placeholder="https://discord.com/api/webhooks/..."></label></div>
+<small>Facebook, Instagram, YouTube and TikTok will be added once those platforms approve our connection.</small>
+<label class="chk"><input type="checkbox" name="consent"><span>I own or manage these accounts and I allow Mamachi to post my ad on them during my paid period.</span></label></div>
+<label class="chk"><input type="checkbox" name="renewReminder" checked><span>Email me a renewal link with 10% off when my campaign ends.</span></label>
+<input class="hp" name="website_url" tabindex="-1" autocomplete="off">
+<h2>3. YOUR PRICE AND POSTING SCHEDULE</h2>
+<div class="sum"><div class="big" id="pr">$0</div><small id="bk"></small><div id="sc" style="margin-top:8px"></div><table id="tb"></table></div>
+<h2>4. SECURE CHECKOUT</h2>
+<label class="chk"><input type="checkbox" name="agree"><span>I agree to the <a href="terms.html" target="_blank">Terms</a> and the <a href="privacy.html" target="_blank">Privacy Policy</a>.</span></label>
+<p><small>Pay with PayPal, or with a debit or credit card (no PayPal account needed). Card payments are received through our PayPal account, and bank transfers or other local methods appear inside PayPal where PayPal supports them in your country. We never see your card details.</small></p>
+<div id="pay-paypal"></div><div id="pay-card"></div>
+<p><small>Pay by PayPal or debit/credit card. Every ad is reviewed first and labelled Sponsored. Not allowed: guaranteed income or returns, scams, adult content, weapons, drugs, counterfeit goods, false health claims. If your ad is not approved you are refunded in full. Results are not guaranteed. The final price is confirmed by our server before you pay.</small></p>
+<div id="msg" role="status"></div><p><small><a href="#" id="dc">Disconnect my accounts</a> (needs your order number and code)</small></p></form></main>
+<script src="https://www.paypal.com/sdk/js?client-id=BAA5Do8e9TywbIScU0LnoJRB065EY5-Do23e3ga-b7aTV3orF7kyM_hHiF9T1Pxuu4X4iLhb2i4aOooeOQ&currency=USD&intent=capture&components=buttons&enable-funding=card"></script>
+<script>
+let WORKER='', TG_BOT='@YourMamachiBot';
+const LANGS=['English','Spanish','French','Portuguese','German','Arabic','Amharic','Swahili','Hindi','Chinese','Japanese','Russian'],REGIONS=['Worldwide','Africa','Europe','North America','Latin America','Middle East','Asia','Oceania'];
+const NAMES={hour:'Hours',day:'Days',week:'Weeks',month:'Months',year:'Years'};
+const f=document.getElementById('f'),msg=document.getElementById('msg'),say=t=>msg.textContent=t,$=id=>document.getElementById(id);let P=null,G=null;const Q=new URLSearchParams(location.search);
+fetch('site.json').then(r=>r.json()).then(j=>{WORKER=(j.worker||'').replace(/\/$/,'');TG_BOT=j.tgBot||TG_BOT;$('bot').textContent=TG_BOT;if(!WORKER||WORKER.includes('YOUR-WORKER'))say('Checkout is not connected yet. Add the worker address to site.json.')}).catch(()=>say('Could not load the site settings.'));
+fetch('geo.json').then(r=>r.json()).then(g=>{G=g;f.geoCountry.innerHTML='<option value="">Choose a country</option>'+g.countries.map(c=>`<option value="${c.c}">${c.n}</option>`).join('');calc()}).catch(()=>{});
+$('bot').textContent=TG_BOT;f.language.innerHTML=LANGS.map(x=>`<option>${x}</option>`).join('');f.geoRegion.innerHTML=REGIONS.map(x=>`<option>${x}</option>`).join('');
+const fmt=v=>(P?P.cur:'$')+v.toFixed(2);
+const tag=t=>t.split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join('').slice(0,30);
+function bestHours(o,n){const ideal=[9,13,19],sc=h=>{const l=(((h+o)%24)+24)%24;return Math.min(...ideal.map(i=>Math.min(Math.abs(l-i),24-Math.abs(l-i))))};return [0,6,12,18].map(h=>[h,sc(h)]).sort((a,b)=>a[1]-b[1]||a[0]-b[0]).slice(0,Math.max(1,Math.min(3,n))).map(x=>x[0]).sort((a,b)=>a-b)}
+function plan(){const d=Object.fromEntries(new FormData(f)),lvl=d.geoLevel,c=G&&G.countries.find(x=>x.c===d.geoCountry),areas=String(d.areas||'').split(',').map(x=>x.trim()).filter(Boolean).slice(0,3);
+ if((lvl==='local'||lvl==='country')&&c)return{off:c.o,place:lvl==='local'?[...areas,c.n].join(', '):c.n,tags:(lvl==='local'?areas.map(tag):[]).concat(tag(c.n))};
+ if(lvl==='region'&&G)return{off:G.meta.regionOffsets[d.geoRegion],place:d.geoRegion,tags:[tag(d.geoRegion)]};
+ if(lvl==='local'||lvl==='country')return{off:null,pending:true,tags:[]};return{off:null,place:'Worldwide',tags:[]}}
+function calc(){if(!P)return;const lv=f.geoLevel.value;$('rg_country').style.display=(lv==='local'||lv==='country')?'grid':'none';$('rg_areas').style.display=lv==='local'?'block':'none';$('rg_region').style.display=lv==='region'?'block':'none';const d=Object.fromEntries(new FormData(f));const unit=d.unit,qty=Math.max(1,Math.floor(+d.qty)||1),g=P.geo.find(x=>x.id===d.geoLevel),s=P.slot.find(x=>x.id===d.slot);if(!g||!s)return;
+ const add=(f.ownSocial.checked?P.addons.ownSocial:0)+(f.unique.checked?P.addons.unique:0),disc=Q.get('renew')?P.renewDiscount:0,p=P.rates[unit]*qty*g.m*s.m*(1+add)*(1-disc),hrs=P.hrs[unit]*qty,ppd={feed:1,social:2,hero:3}[s.id],total=Math.max(1,Math.ceil(hrs/24*ppd));
+ $('pr').textContent=fmt(p);$('bk').textContent=`${P.rates[unit]} x ${qty} x reach ${g.m} x placement ${s.m}${add?' x extras '+(1+add).toFixed(2):''}${disc?' less 10% renewal':''}`;
+ const pl=plan(),times=pl.off===null?(P.schedule[s.id]||[12]):bestHours(pl.off,ppd),L=h=>{const t=(((h+pl.off)%24)+24)%24,hh=Math.floor(t),mm=Math.round((t-hh)*60);return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')},T=h=>String(h).padStart(2,'0')+':00'+(pl.off===null?'':' ('+L(h)+' local)');
+ $('sc').innerHTML=`<b>${ppd} post${ppd>1?'s':''} a day, ${total} in total.</b> Times (UTC): ${times.map(T).join(', ')}. The first post comes at the next time after we approve your ad.`;
+ $('pz').innerHTML=pl.pending?'<b>Choose the country you want to reach.</b> We will then show the exact place, local hashtags and posting times.':pl.off===null?'<b>Worldwide:</b> your ad goes to all our channels at our standard times.':`<b>Place:</b> ${pl.place}<br><b>Local hashtags we add:</b> ${pl.tags.map(x=>'#'+x).join(' ')}<br><b>Posting at local prime time</b> (nearest to about 09:00, 13:00 and 19:00 where you are targeting).`;
+ const days=Math.min(7,Math.ceil(total/ppd)),rows=['<tr><th>Day</th><th>Posts (UTC and local)</th></tr>'];let left=total;for(let i=1;i<=days;i++){const n=Math.min(ppd,left);left-=n;rows.push(`<tr><td>Day ${i}</td><td>${times.slice(0,n).map(T).join(', ')}</td></tr>`)}if(Math.ceil(total/ppd)>7)rows.push(`<tr><td colspan="2"><small>...and so on until all ${total} posts are made.</small></td></tr>`);$('tb').innerHTML=rows.join('')}
+fetch('pricing.json').then(r=>r.json()).then(p=>{P=p;f.unit.innerHTML=Object.keys(p.rates).map(u=>`<option value="${u}">${NAMES[u]}</option>`).join('');f.geoLevel.innerHTML=p.geo.map(g=>`<option value="${g.id}">${g.n} (${g.s})</option>`).join('');f.slot.innerHTML=p.slot.map(s=>`<option value="${s.id}">${s.n} (${s.s})</option>`).join('');
+ $('xu').textContent=`+${p.addons.unique*100}% | fresh wording on every channel`;$('xo').textContent=`+${p.addons.ownSocial*100}% | we post only your ad on accounts you connect`;
+ if(p.rates[Q.get('unit')])f.unit.value=Q.get('unit');if(+Q.get('qty')>0)f.qty.value=Math.floor(+Q.get('qty'));if(p.geo.some(g=>g.id===Q.get('geo')))f.geoLevel.value=Q.get('geo');if(p.slot.some(s=>s.id===Q.get('slot')))f.slot.value=Q.get('slot');
+ f.ownSocial.checked=Q.get('own')==='1';f.unique.checked=Q.get('var')!=='same';$('own').style.display=f.ownSocial.checked?'block':'none';calc()});
+f.addEventListener('input',calc);f.addEventListener('change',()=>{$('own').style.display=f.ownSocial.checked?'block':'none';calc()});
+const post=async(p,b)=>{const r=await fetch(WORKER+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});const j=await r.json();if(!r.ok)throw new Error(j.error||'error');return j};
+function payload(){const d=Object.fromEntries(new FormData(f));return{name:d.name,email:d.email,productTitle:d.productTitle,link:d.link,summary:d.summary,language:d.language,hashtags:d.hashtags,unit:d.unit,qty:Math.floor(+d.qty)||1,geoLevel:d.geoLevel,geoRegion:d.geoRegion,geoCountry:d.geoCountry,areas:d.areas,adPrompt:d.adPrompt,slot:d.slot,
+ variation:f.unique.checked?'unique':'same',ownSocial:f.ownSocial.checked,renewReminder:f.renewReminder.checked,renewOf:Q.get('renew')||undefined,website_url:d.website_url}}
+function button(src,el){const b=paypal.Buttons({fundingSource:src,style:{layout:'horizontal',height:46,tagline:false},
+ onClick:(d,a)=>{if(!f.checkValidity()){f.reportValidity();return a.reject()}const lv=f.geoLevel.value;if((lv==='local'||lv==='country')&&!f.geoCountry.value){say('Please choose the country you want to reach.');return a.reject()}if(lv==='local'&&!f.areas.value.trim()){say('Please name the area or city you want to reach.');return a.reject()}if(!f.agree.checked){say('Please tick the box to accept the Terms and Privacy Policy.');return a.reject()}if(f.ownSocial.checked&&!f.consent.checked){say('Please tick the permission box for your own accounts.');return a.reject()}say('');return a.resolve()},
+ createOrder:async()=>{const d=Object.fromEntries(new FormData(f)),o=await post('/order',payload());window.manage={id:o.id,token:o.manageToken};
+  if(f.ownSocial.checked){const jobs=[['bluesky',{handle:d.bs_handle,appPassword:d.bs_pass}],['mastodon',{instance:d.ma_inst,token:d.ma_tok}],['telegram',{channel:d.tg_chan}],['discord',{webhook:d.dc_hook}]].filter(([,v])=>Object.values(v).every(Boolean));
+   if(!jobs.length)throw new Error('connect at least one account, or untick the option');for(const [platform,v] of jobs){say('Checking your '+platform+' account...');await post('/social/save',{id:o.id,manageToken:o.manageToken,platform,...v})}}
+  say('Price confirmed: $'+o.amount+' '+o.currency);return o.orderId},
+ onApprove:async d=>{say('Confirming your payment...');const j=await post('/capture',{orderId:d.orderID}),m=window.manage||{};
+  if(j.ok){msg.innerHTML='';const p=document.createElement('p');p.append('Payment received. Your ad is now being reviewed and starts once approved. Bookmark your private tracking page: ');const a=document.createElement('a');a.href=`track.html?id=${m.id}&token=${m.token}`;a.textContent='track my ad';p.append(a,'. Order number: '+m.id+'. Disconnect code: '+m.token);msg.append(p)}else say('Payment was not completed. You have not been charged.')},
+ onError:e=>say('Could not complete checkout: '+(e.message||e)),onCancel:()=>say('Checkout cancelled. You have not been charged.')});if(b.isEligible())b.render(el)}
+if(typeof paypal==='undefined')say('Payments are not switched on yet. Please check back soon.');else{button(paypal.FUNDING.PAYPAL,'#pay-paypal');button(paypal.FUNDING.CARD,'#pay-card')}
+$('dc').onclick=async e=>{e.preventDefault();const id=prompt('Order number'),token=prompt('Your disconnect code');if(!id||!token)return;try{await post('/social/disconnect',{id,manageToken:token});say('Done. All your connected accounts were removed.')}catch(err){say('Could not disconnect: '+err.message)}};
+</script></body></html>
