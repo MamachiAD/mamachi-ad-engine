@@ -34,7 +34,7 @@ class Models:
 g = types.ModuleType("google"); ga = types.ModuleType("google.genai"); gt = types.ModuleType("google.genai.types")
 ga.Client = lambda **k: types.SimpleNamespace(models=Models()); gt.HttpOptions = lambda **k: None; ga.types = gt; g.genai = ga
 sys.modules.update({"google": g, "google.genai": ga, "google.genai.types": gt})
-ve = types.ModuleType("video_engine"); ve.generate_short_video = lambda *a, **k: None; ve.prepare_tiktok_package = ve.prepare_instagram_package = lambda *a, **k: False; sys.modules["video_engine"] = ve
+ve = types.ModuleType("video_engine"); STYLES = []; ve.generate_short_video = lambda *a, **k: (STYLES.append(k.get("style")), None)[1]; ve.prepare_tiktok_package = ve.prepare_instagram_package = lambda *a, **k: False; sys.modules["video_engine"] = ve
 
 import requests
 calls = []
